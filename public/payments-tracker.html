@@ -1,79 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment Tracker</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <header>
       <h1>Payment Tracker</h1>
-      <div class="actions">
-        <button id="addPaymentBtn">+ Add Payment</button>
-        <button id="exportCsvBtn">Export CSV</button>
-        <label class="importLabel">
+      <div class="tiny">Track payments outside your system</div>
+      <div class="top-actions">
+        <button id="addBtn">+ Add Payment</button>
+        <button id="exportCsvBtn" class="btn-ghost">Export CSV</button>
+        <label class="import-label">
           Import CSV
-          <input type="file" id="importFile" accept=".csv" hidden>
+          <input id="importFile" type="file" accept=".csv" class="file-input">
         </label>
-        <button id="clearAllBtn">Clear All</button>
+        <button id="clearAll" class="btn-ghost">Clear All</button>
       </div>
     </header>
 
-    <section class="filters">
-      <input type="text" id="search" placeholder="Search invoice or customer">
-      <input type="date" id="fromDate">
-      <input type="date" id="toDate">
-      <select id="filterDeposited">
-        <option value="all">All</option>
-        <option value="yes">Deposited</option>
-        <option value="no">Not Deposited</option>
-      </select>
-    </section>
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="search">Search</label>
+          <input id="search" type="text" placeholder="Invoice # or Customer">
+        </div>
+        <div>
+          <label for="fromDate">From</label>
+          <input id="fromDate" type="date">
+        </div>
+        <div>
+          <label for="toDate">To</label>
+          <input id="toDate" type="date">
+        </div>
+        <div>
+          <label for="filterDeposited">Deposited</label>
+          <select id="filterDeposited">
+            <option value="all">All</option>
+            <option value="yes">Deposited</option>
+            <option value="no">Not Deposited</option>
+          </select>
+        </div>
+        <div class="total-display">
+          <div class="small">Total Displayed</div>
+          <div id="totalDisplayed" class="total">$0.00</div>
+        </div>
+      </div>
 
-    <section>
-      <table id="paymentsTable">
-        <thead>
-          <tr>
-            <th>Date Paid</th>
-            <th>Invoice #</th>
-            <th>Amount</th>
-            <th>Deposited Date</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="paymentsBody">
-          <!-- Rows appear here -->
-        </tbody>
-      </table>
-      <div id="emptyNotice">No payments yet. Click "Add Payment" to start.</div>
-    </section>
+      <div class="main-grid">
+        <div>
+          <table id="paymentsTable">
+            <thead>
+              <tr>
+                <th>Date Paid</th>
+                <th>Invoice #</th>
+                <th>Amount</th>
+                <th>Deposited Date</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsBody"></tbody>
+          </table>
+          <div id="emptyNotice" class="empty">No payments yet — click "Add Payment".</div>
+        </div>
+      </div>
+    </div>
 
-    <footer>
-      <span id="summaryCount">0 payments</span> |
-      <span id="summaryTotal">$0.00</span>
-    </footer>
+    <footer>Saved locally on this browser. Use Export to backup.</footer>
   </div>
 
   <!-- Modal -->
   <div id="modal" class="modal">
-    <form id="paymentForm">
+    <form id="paymentForm" class="form">
       <h2 id="modalTitle">Add Payment</h2>
-      <label>Date Paid<input type="date" id="datePaid" required></label>
-      <label>Invoice #<input type="text" id="invoice" required></label>
-      <label>Amount<input type="number" step="0.01" min="0" id="amount" required></label>
-      <label>Deposited Date<input type="date" id="depositedDate"></label>
-      <label>Customer<input type="text" id="customer" required></label>
-      <div class="formButtons">
-        <button type="submit" id="saveBtn">Save</button>
-        <button type="button" id="cancelBtn">Cancel</button>
+      <button type="button" id="closeModal" class="btn-ghost">Cancel</button>
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Date payment made</label>
+          <input type="date" id="datePaid" required>
+        </div>
+        <div class="form-row">
+          <label>Invoice #</label>
+          <input type="text" id="invoice" required>
+        </div>
+        <div class="form-row">
+          <label>Amount paid</label>
+          <input type="number" id="amount" step="0.01" min="0" required>
+        </div>
+        <div class="form-row">
+          <label>Deposited date (optional)</label>
+          <input type="date" id="depositedDate">
+        </div>
+        <div class="form-row">
+          <label>Customer name</label>
+          <input type="text" id="customer" required>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit">Save Payment</button>
+        <button type="button" id="saveAndAddAnother" class="btn-ghost">Save & Add Another</button>
       </div>
     </form>
   </div>
 
-  <script src="script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
