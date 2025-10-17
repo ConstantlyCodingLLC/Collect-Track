@@ -1,136 +1,42 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Payment Tracker</title>
-<style>
-:root{
-  --bg:#0f1724; --card:#0b1220; --accent:#0ea5a4; --muted:#94a3b8;
-  --glass: rgba(255,255,255,0.02);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  min-height:100vh;
-  background:
-    linear-gradient(180deg, rgba(14,165,164,0.06), rgba(2,6,23,0.4)),
-    radial-gradient(600px 400px at 10% 10%, rgba(16,185,129,0.03), transparent 20%),
-    var(--bg);
-  color:#e6eef8;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  padding:28px;
-}
-.wrap{max-width:1100px;margin:0 auto;}
-header{display:flex;gap:16px;align-items:center;margin-bottom:18px;}
-header h1{font-size:20px;margin:0;letter-spacing:0.2px;}
-.top-actions{margin-left:auto;display:flex;gap:8px;}
-button,input[type="button"],input[type="submit"]{
-  border:0;
-  background:linear-gradient(180deg,var(--accent), #089b98);
-  color:#042027;
-  padding:8px 12px;
-  border-radius:8px;
-  font-weight:600;
-  cursor:pointer;
-  box-shadow:0 6px 16px rgba(14,165,164,0.08);
-}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04);box-shadow:none;}
-.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;box-shadow: 0 6px 24px rgba(2,6,23,0.6);}
-.controls{display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
-label{font-size:13px;color:var(--muted);}
-input[type="text"], input[type="date"], input[type="number"], select{
-  background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:inherit;
-  padding:8px 10px;border-radius:8px;outline:none;min-width:120px;
-}
-.main-grid{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-top:12px;}
-table{width:100%;border-collapse:collapse;font-size:14px;}
-th,td{padding:10px 8px;text-align:left;border-bottom:1px dashed rgba(255,255,255,0.03);vertical-align:middle;}
-th{color:var(--muted);font-weight:600;font-size:13px;}
-tbody tr:hover{ background: rgba(255,255,255,0.01) }
-.small{font-size:13px;color:var(--muted)}
-.actions button{ margin-right:6px }
-.badge{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px;background:rgba(255,255,255,0.03);}
-.deposited{ color:#082f21; background:#7ef3d1; padding:4px 8px; border-radius:8px; font-weight:700 }
-.not-deposited{ color:#ffd7d7; background:rgba(255,255,255,0.03); border-radius:8px; padding:4px 8px; font-weight:600 }
-.total{font-size:20px;font-weight:800;margin-top:8px;}
-footer{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center }
-/* modal */
-.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:60;background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.6));padding:18px;}
-.modal.show{ display:flex }
-.form{width:100%; max-width:760px; background:linear-gradient(180deg, #07121a, #07111b); padding:18px; border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,0.7);}
-.form-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px }
-.form-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:4px }
-.form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
-.tiny{ font-size:12px; color:var(--muted) }
-@media (max-width:900px){
-  .main-grid{ grid-template-columns:1fr; }
-  header{ flex-direction:column; align-items:flex-start; gap:10px }
-  .top-actions{ margin-left:0 }
-  .form-grid{ grid-template-columns:1fr }
-}
-.file-input{display:none;}
-.import-label{display:inline-flex; align-items:center; gap:8px; cursor:pointer; color:var(--muted); padding:8px 10px; border-radius:8px; border:1px dashed rgba(255,255,255,0.03); background:transparent;}
-.empty{text-align:center; padding:36px; color:var(--muted);}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
-<header>
-  <div>
+  <header>
     <h1>Payment Tracker</h1>
-    <div class="tiny">Track checks & payments outside your system</div>
-  </div>
-  <div class="top-actions">
-    <button id="addBtn">+ Add Payment</button>
-    <button id="exportCsvBtn" class="btn-ghost">Export CSV</button>
-    <label class="import-label" title="Import CSV">
-      Import CSV
-      <input id="importFile" class="file-input" type="file" accept=".csv,text/csv" />
-    </label>
-    <button id="clearAll" class="btn-ghost" title="Clear everything (localStorage)">Clear All</button>
-  </div>
-</header>
+    <div class="top-actions">
+      <button id="addBtn">+ Add Payment</button>
+      <button id="exportCsvBtn">Export CSV</button>
+      <label>Import CSV<input type="file" id="importFile" hidden></label>
+      <button id="clearAll">Clear All</button>
+    </div>
+  </header>
 
-<div class="card">
-<div class="controls">
-  <div>
-    <label for="search">Search</label><br>
-    <input id="search" type="text" placeholder="Invoice # or customer name" />
-  </div>
-  <div>
-    <label for="fromDate">From</label><br>
-    <input id="fromDate" type="date" />
-  </div>
-  <div>
-    <label for="toDate">To</label><br>
-    <input id="toDate" type="date" />
-  </div>
-  <div>
-    <label for="filterDeposited">Deposited</label><br>
+  <div class="filter-card">
+    <input type="text" id="search" placeholder="Search invoice or customer">
+    <input type="date" id="fromDate">
+    <input type="date" id="toDate">
     <select id="filterDeposited">
       <option value="all">All</option>
       <option value="yes">Deposited</option>
       <option value="no">Not Deposited</option>
     </select>
   </div>
-  <div style="margin-left:auto; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-    <div class="small">Total displayed</div>
-    <div id="totalDisplayed" class="total">$0.00</div>
-  </div>
-</div>
 
-<div class="main-grid">
-  <div>
-    <table id="paymentsTable">
+  <div class="card">
+    <table>
       <thead>
         <tr>
           <th>Date Paid</th>
           <th>Invoice #</th>
           <th>Amount</th>
-          <th>Deposited Date</th>
+          <th>Deposited</th>
           <th>Customer</th>
           <th>Status</th>
           <th>Actions</th>
@@ -138,211 +44,28 @@ footer{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center }
       </thead>
       <tbody id="paymentsBody"></tbody>
     </table>
-    <div id="emptyNotice" class="empty" style="display:none">No payments yet — click "Add Payment".</div>
+    <div id="emptyNotice">No payments yet</div>
   </div>
-  <aside>
-    <div class="card" style="padding:12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div class="small">Summary</div>
-          <div id="summaryCount" style="font-weight:800; font-size:18px">0 payments</div>
-        </div>
-        <div style="text-align:right">
-          <div class="small">Total balance</div>
-          <div id="summaryTotal" style="font-weight:800; font-size:18px">$0.00</div>
-        </div>
-      </div>
-      <hr style="margin:12px 0; border:none; height:1px; background:rgba(255,255,255,0.03)">
-      <div style="display:flex; gap:8px; flex-direction:column">
-        <button id="markAllDeposited" class="btn-ghost">Mark displayed as deposited</button>
-        <button id="deleteDisplayed" class="btn-ghost">Delete displayed</button>
-        <button id="downloadSample" class="btn-ghost">Download CSV template</button>
-      </div>
-      <div style="margin-top:12px; color:var(--muted); font-size:13px">
-        CSV Import format: invoice,date_paid (YYYY-MM-DD),amount,deposited_date (YYYY-MM-DD or blank),customer
-      </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+  <form id="paymentForm" class="form">
+    <h2 id="modalTitle">Add Payment</h2>
+    <input type="date" id="datePaid" required>
+    <input type="text" id="invoice" placeholder="Invoice #" required>
+    <input type="number" id="amount" placeholder="Amount" step="0.01" min="0" required>
+    <input type="date" id="depositedDate" placeholder="Deposited Date">
+    <input type="text" id="customer" placeholder="Customer" required>
+    <div class="form-actions">
+      <button type="submit">Save</button>
+      <button type="button" id="cancelModal">Cancel</button>
     </div>
-  </aside>
-</div>
-</div>
-
-<footer>Saved locally on this browser. Use Export to backup. 👇</footer>
+  </form>
 </div>
 
-<div id="modal" class="modal">
-<form id="paymentForm" class="form" autocomplete="off">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
-<h2 id="modalTitle" style="margin:0;font-size:16px">Add Payment</h2>
-<button type="button" id="closeModal" class="btn-ghost">Cancel</button>
-</div>
-<div class="form-grid">
-<div class="form-row">
-<label for="datePaid">Date payment made</label>
-<input id="datePaid" name="datePaid" type="date" required>
-</div>
-<div class="form-row">
-<label for="invoice">Invoice #</label>
-<input id="invoice" name="invoice" type="text" placeholder="e.g. INV-1234" required>
-</div>
-<div class="form-row">
-<label for="amount">Amount paid</label>
-<input id="amount" name="amount" type="number" step="0.01" min="0" placeholder="0.00" required>
-</div>
-<div class="form-row">
-<label for="depositedDate">Deposited date (optional)</label>
-<input id="depositedDate" name="depositedDate" type="date">
-</div>
-<div class="form-row" style="grid-column:span 2;">
-<label for="customer">Customer name</label>
-<input id="customer" name="customer" type="text" placeholder="Customer or payer name" required>
-</div>
-</div>
-<div class="form-actions">
-<button type="submit" id="saveBtn">Save payment</button>
-<button type="button" id="saveAndAddAnother" class="btn-ghost">Save & Add Another</button>
-</div>
-</form>
-</div>
-
-<script>
-(function(){
-const LS_KEY = 'payments_v1';
-const addBtn = document.getElementById('addBtn');
-const modal = document.getElementById('modal');
-const paymentForm = document.getElementById('paymentForm');
-const closeModal = document.getElementById('closeModal');
-const paymentsBody = document.getElementById('paymentsBody');
-const paymentsTable = document.getElementById('paymentsTable');
-const emptyNotice = document.getElementById('emptyNotice');
-const searchInput = document.getElementById('search');
-const fromDate = document.getElementById('fromDate');
-const toDate = document.getElementById('toDate');
-const filterDeposited = document.getElementById('filterDeposited');
-const totalDisplayed = document.getElementById('totalDisplayed');
-const summaryCount = document.getElementById('summaryCount');
-const summaryTotal = document.getElementById('summaryTotal');
-const exportCsvBtn = document.getElementById('exportCsvBtn');
-const importFile = document.getElementById('importFile');
-const clearAll = document.getElementById('clearAll');
-const markAllDeposited = document.getElementById('markAllDeposited');
-const deleteDisplayed = document.getElementById('deleteDisplayed');
-const downloadSample = document.getElementById('downloadSample');
-const saveAndAddAnother = document.getElementById('saveAndAddAnother');
-const modalTitle = document.getElementById('modalTitle');
-const saveBtn = document.getElementById('saveBtn');
-const datePaid = document.getElementById('datePaid');
-const invoice = document.getElementById('invoice');
-const amount = document.getElementById('amount');
-const depositedDate = document.getElementById('depositedDate');
-const customer = document.getElementById('customer');
-
-let payments=[],editingId=null;
-
-function uid(){ return 'p_' + Math.random().toString(36).slice(2,10); }
-function load(){ const raw = localStorage.getItem(LS_KEY); payments = raw?JSON.parse(raw):[]; }
-function save(){ localStorage.setItem(LS_KEY,JSON.stringify(payments)); }
-function formatCurrency(n){ return (Number(n)||0).toLocaleString(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2}); }
-function formatDate(d){ if(!d) return ''; if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; const dt=new Date(d); if(isNaN(dt)) return d; return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
-function clearForm(){ paymentForm.reset(); editingId=null; modalTitle.textContent='Add Payment'; }
-
-function addPayment(obj){ obj.id=uid(); obj.datePaid=formatDate(obj.datePaid); obj.depositedDate=obj.depositedDate?formatDate(obj.depositedDate):''; obj.amount=Number(obj.amount)||0; payments.unshift(obj); save(); render(); }
-function updatePayment(id,changes){ const idx=payments.findIndex(p=>p.id===id); if(idx===-1) return; payments[idx]=Object.assign({},payments[idx],changes,{ datePaid:formatDate(changes.datePaid||payments[idx].datePaid), depositedDate: changes.depositedDate===undefined?payments[idx].depositedDate:(changes.depositedDate?formatDate(changes.depositedDate):''), amount:Number(changes.amount||payments[idx].amount) }); save(); render(); }
-function removePayment(id){ payments=payments.filter(p=>p.id!==id); save(); render(); }
-
-function getFiltered(){ const q=searchInput.value.trim().toLowerCase(); const from=fromDate.value||null; const to=toDate.value||null; const depos=filterDeposited.value; return payments.filter(p=>{ if(q){ const match=(p.invoice||'').toLowerCase().includes(q)||(p.customer||'').toLowerCase().includes(q); if(!match) return false; } if(from&&(!p.datePaid||p.datePaid<from)) return false; if(to&&(!p.datePaid||p.datePaid>to)) return false; if(depos==='yes'&&!p.depositedDate) return false; if(depos==='no'&&p.depositedDate) return false; return true; }); }
-
-function render(){
-  const list=getFiltered();
-  paymentsBody.innerHTML='';
-  if(list.length===0){ emptyNotice.style.display='block'; paymentsTable.style.display='none'; } 
-  else{
-    emptyNotice.style.display='none'; paymentsTable.style.display='';
-    for(const p of list){
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${p.datePaid||''}</td><td>${p.invoice||''}</td><td>${formatCurrency(p.amount)}</td><td>${p.depositedDate||''}</td><td>${p.customer||''}</td><td>${p.depositedDate?'<span class="deposited">Deposited</span>':'<span class="not-deposited">Not deposited</span>'}</td><td class="actions"><button data-action="edit" data-id="${p.id}" class="btn-ghost">Edit</button><button data-action="toggle" data-id="${p.id}" class="btn-ghost">${p.depositedDate?'Unset Deposited':'Mark Deposited'}</button><button data-action="delete" data-id="${p.id}" class="btn-ghost">Delete</button></td>`; paymentsBody.appendChild(tr);
-    }
-  }
-  const total=list.reduce((s,p)=>s+Number(p.amount||0),0);
-  totalDisplayed.textContent=formatCurrency(total);
-  summaryCount.textContent=`${payments.length} payments (all)`;
-  summaryTotal.textContent=formatCurrency(payments.reduce((s,p)=>s+Number(p.amount||0),0));
-}
-
-function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); datePaid.focus(); }
-function closeModalFunc(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); clearForm(); }
-
-addBtn.addEventListener('click',()=>{ clearForm(); openModal(); });
-closeModal.addEventListener('click',()=>closeModalFunc());
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModalFunc(); });
-
-paymentForm.addEventListener('submit',e=>{
-  e.preventDefault();
-  const payload={ datePaid:datePaid.value, invoice:invoice.value.trim(), amount:Number(amount.value), depositedDate:depositedDate.value||'', customer:customer.value.trim() };
-  if(!payload.invoice||!payload.customer||!payload.datePaid||isNaN(payload.amount)){ alert('Please fill required fields'); return; }
-  if(editingId) updatePayment(editingId,payload); else addPayment(payload);
-  closeModalFunc();
-});
-
-saveAndAddAnother.addEventListener('click',()=>{
-  const payload={ datePaid:datePaid.value, invoice:invoice.value.trim(), amount:Number(amount.value), depositedDate:depositedDate.value||'', customer:customer.value.trim() };
-  if(!payload.invoice||!payload.customer||!payload.datePaid||isNaN(payload.amount)){ alert('Please fill required fields'); return; }
-  addPayment(payload); paymentForm.reset(); datePaid.focus();
-});
-
-paymentsBody.addEventListener('click',e=>{
-  const btn=e.target.closest('button'); if(!btn) return;
-  const id=btn.dataset.id; const action=btn.dataset.action;
-  if(action==='edit'){ const p=payments.find(x=>x.id===id); if(!p) return; editingId=p.id; modalTitle.textContent='Edit Payment'; datePaid.value=p.datePaid||''; invoice.value=p.invoice||''; amount.value=p.amount||''; depositedDate.value=p.depositedDate||''; customer.value=p.customer||''; openModal(); }
-  else if(action==='delete'){ if(confirm('Delete this payment?')) removePayment(id); }
-  else if(action==='toggle'){ const p=payments.find(x=>x.id===id); if(!p) return; updatePayment(id,{depositedDate:p.depositedDate?'':(new Date()).toISOString().slice(0,10)}); }
-});
-
-[searchInput,fromDate,toDate,filterDeposited].forEach(el=>el.addEventListener('input',()=>render()));
-
-exportCsvBtn.addEventListener('click',()=>{
-  if(payments.length===0){ alert('No payments to export'); return; }
-  const header=['id','invoice','date_paid','amount','deposited_date','customer'];
-  const rows=payments.map(p=>[p.id,p.invoice||'',p.datePaid||'',(Number(p.amount)||0).toFixed(2),p.depositedDate||'',p.customer||'']);
-  const csv=[header,...rows].map(r=>r.join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='payments-export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
-
-importFile.addEventListener('change',e=>{
-  const f=e.target.files && e.target.files[0]; if(!f) return;
-  const reader=new FileReader();
-  reader.onload=function(){
-    try{
-      const text=reader.result;
-      const parsed=parseCsv(text); const rows=parsed.rows||[]; let count=0;
-      const h=parsed.headers.map(hh=>hh.toLowerCase());
-      for(const row of rows){
-        let map={};
-        if(h[0]&&h[0].includes('id')){ map={invoice:row[1]||'', datePaid:row[2]||'', amount:row[3]||'0', depositedDate:row[4]||'', customer:row[5]||''}; }
-        else{ map={invoice:row[0]||'', datePaid:row[1]||'', amount:row[2]||'0', depositedDate:row[3]||'', customer:row[4]||''}; }
-        if(!map.invoice||!map.datePaid||isNaN(Number(map.amount))) continue;
-        addPayment({ invoice:map.invoice.trim(), datePaid:map.datePaid.trim(), amount:Number(map.amount), depositedDate:map.depositedDate?map.depositedDate.trim():'', customer:(map.customer||'').trim() }); count++;
-      }
-      alert('Imported '+count+' rows.');
-    } catch(err){ console.error(err); alert('Error importing CSV.'); }
-    finally{ importFile.value=''; }
-  };
-  reader.readAsText(f);
-});
-
-clearAll.addEventListener('click',()=>{ if(confirm('Clear all payments?')){ payments=[]; save(); render(); } });
-markAllDeposited.addEventListener('click'=>{ const list=getFiltered(); const today=(new Date()).toISOString().slice(0,10); for(const p of list){ if(!p.depositedDate) updatePayment(p.id,{depositedDate:today}); } });
-deleteDisplayed.addEventListener('click',()=>{ if(!confirm('Delete displayed payments?')) return; const list=getFiltered(); const ids=new Set(list.map(x=>x.id)); payments=payments.filter(p=>!ids.has(p.id)); save(); render(); });
-downloadSample.addEventListener('click',()=>{ const sample='invoice,date_paid,amount,deposited_date,customer\nINV-101,2025-10-01,150.00,2025-10-03,Acme Co.\nINV-102,2025-10-05,75.50,,John Smith\n'; const blob=new Blob([sample],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='payments-sample.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
-
-function parseCsv(text){
-  const lines=text.split(/\r\n|\n/).filter(l=>l.trim()!==''); if(lines.length===0) return {headers:[],rows:[]};
-  const rows=[]; for(const line of lines){ let cur='',inQ=false,row=[]; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(inQ&&line[i+1]==='"'){ cur+='"'; i++; continue; } inQ=!inQ; continue; } if(ch===','&&!inQ){ row.push(cur); cur=''; continue; } cur+=ch; } row.push(cur); rows.push(row); }
-  const headers=rows[0].map(h=>h.trim()); const dataRows=rows.slice(1);
-  return {headers,rows:dataRows};
-}
-
-load(); render();
-})();
-</script>
+<script src="storage.js"></script>
+<script src="csv.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
