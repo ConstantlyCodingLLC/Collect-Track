@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Payment Tracker</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --accent:#0ea5a4; --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.02);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        linear-gradient(180deg, rgba(14,165,164,0.06), rgba(2,6,23,0.4)),
+        radial-gradient(600px 400px at 10% 10%, rgba(16,185,129,0.03), transparent 20%),
+        var(--bg);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:28px;
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+    }
+    header{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      margin-bottom:18px;
+    }
+    header h1{
+      font-size:20px;
+      margin:0;
+      letter-spacing:0.2px;
+    }
+    .top-actions{
+      margin-left:auto;
+      display:flex;
+      gap:8px;
+    }
+    button, input[type="button"], input[type="submit"]{
+      border:0;
+      background:linear-gradient(180deg,var(--accent), #089b98);
+      color:#042027;
+      padding:8px 12px;
+      border-radius:8px;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow:0 6px 16px rgba(14,165,164,0.08);
+    }
+    .btn-ghost{
+      background:transparent;
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,0.04);
+      box-shadow:none;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:16px;
+      box-shadow: 0 6px 24px rgba(2,6,23,0.6);
+    }
+    .controls{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    label{
+      font-size:13px;
+      color:var(--muted);
+    }
+    input[type="text"], input[type="date"], input[type="number"], select{
+      background:var(--glass);
+      border:1px solid rgba(255,255,255,0.04);
+      color:inherit;
+      padding:8px 10px;
+      border-radius:8px;
+      outline:none;
+      min-width:120px;
+    }
+    .main-grid{
+      display:grid;
+      grid-template-columns:1fr 320px;
+      gap:14px;
+      margin-top:12px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    th, td{
+      padding:10px 8px;
+      text-align:left;
+      border-bottom:1px dashed rgba(255,255,255,0.03);
+      vertical-align:middle;
+    }
+    th{
+      color:var(--muted);
+      font-weight:600;
+      font-size:13px;
+    }
+    tbody tr:hover{ background: rgba(255,255,255,0.01) }
+    .small{font-size:13px;color:var(--muted)}
+    .actions button{ margin-right:6px }
+    .badge{
+      display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px;
+      background:rgba(255,255,255,0.03);
+    }
+    .deposited{ color:#082f21; background:#7ef3d1; padding:4px 8px; border-radius:8px; font-weight:700 }
+    .not-deposited{ color:#ffd7d7; background:rgba(255,255,255,0.03); border-radius:8px; padding:4px 8px; font-weight:600 }
+    .total{
+      font-size:20px;
+      font-weight:800;
+      margin-top:8px;
+    }
+    footer{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center }
+    /* modal form */
+    .modal{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:60;
+      background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.6));
+      padding:18px;
+    }
+    .modal.show{ display:flex }
+    .form{
+      width:100%; max-width:760px; background:linear-gradient(180deg, #07121a, #07111b); padding:18px; border-radius:12px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.7);
+    }
+    .form-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px }
+    .form-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:4px }
+    .form-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
+    .tiny{ font-size:12px; color:var(--muted) }
+    /* responsive */
+    @media (max-width:900px){
+      .main-grid{ grid-template-columns:1fr; }
+      header{ flex-direction:column; align-items:flex-start; gap:10px }
+      .top-actions{ margin-left:0 }
+      .form-grid{ grid-template-columns:1fr }
+    }
+    .file-input{
+      display:none;
+    }
+    .import-label{
+      display:inline-flex; align-items:center; gap:8px; cursor:pointer; color:var(--muted);
+      padding:8px 10px; border-radius:8px; border:1px dashed rgba(255,255,255,0.03);
+      background:transparent;
+    }
+    .empty{
+      text-align:center; padding:36px; color:var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Payment Tracker</h1>
+        <div class="tiny">Track checks & payments outside your system</div>
+      </div>
+
+      <div class="top-actions">
+        <button id="addBtn">+ Add Payment</button>
+        <button id="exportCsvBtn" class="btn-ghost">Export CSV</button>
+        <label class="import-label" title="Import CSV (invoice,date,amount,depositDate,customer)">
+          Import CSV
+          <input id="importFile" class="file-input" type="file" accept=".csv,text/csv" />
+        </label>
+        <button id="clearAll" class="btn-ghost" title="Clear everything (localStorage)">Clear All</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="search">Search (invoice or customer)</label><br>
+          <input id="search" type="text" placeholder="Invoice # or customer name" />
+        </div>
+
+        <div>
+          <label for="fromDate">From</label><br>
+          <input id="fromDate" type="date" />
+        </div>
+        <div>
+          <label for="toDate">To</label><br>
+          <input id="toDate" type="date" />
+        </div>
+
+        <div>
+          <label for="filterDeposited">Deposited</label><br>
+          <select id="filterDeposited">
+            <option value="all">All</option>
+            <option value="yes">Deposited</option>
+            <option value="no">Not Deposited</option>
+          </select>
+        </div>
+
+        <div style="margin-left:auto; display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+          <div class="small">Total displayed</div>
+          <div id="totalDisplayed" class="total">$0.00</div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div>
+          <table id="paymentsTable" aria-describedby="payments-desc">
+            <thead>
+              <tr>
+                <th>Date Paid</th>
+                <th>Invoice #</th>
+                <th>Amount</th>
+                <th>Deposited Date</th>
+                <th>Customer</th>
+                <th style="width:120px">Status</th>
+                <th style="width:130px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsBody">
+              <!-- rows -->
+            </tbody>
+          </table>
+
+          <div id="emptyNotice" class="empty" style="display:none">
+            No payments yet — click "Add Payment" to start tracking.
+          </div>
+        </div>
+
+        <aside>
+          <div class="card" style="padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div class="small">Summary</div>
+                <div style="font-weight:800; font-size:18px" id="summaryCount">0 payments</div>
+              </div>
+              <div style="text-align:right">
+                <div class="small">Total balance</div>
+                <div style="font-weight:800; font-size:18px" id="summaryTotal">$0.00</div>
+              </div>
+            </div>
+
+            <hr style="margin:12px 0; border:none; height:1px; background:rgba(255,255,255,0.03)">
+
+            <div style="display:flex; gap:8px; flex-direction:column">
+              <button id="markAllDeposited" class="btn-ghost">Mark displayed as deposited</button>
+              <button id="deleteDisplayed" class="btn-ghost">Delete displayed</button>
+              <button id="downloadSample" class="btn-ghost">Download CSV template</button>
+            </div>
+
+            <div style="margin-top:12px; color:var(--muted); font-size:13px">
+              CSV Import format: invoice, date_paid (YYYY-MM-DD), amount (number), deposited_date (YYYY-MM-DD or blank), customer
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <footer>Saved locally on this browser. Use Export to backup. 👇</footer>
+  </div>
+
+  <!-- Modal Form -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <form id="paymentForm" class="form" autocomplete="off">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;">
+        <h2 id="modalTitle" style="margin:0;font-size:16px">Add Payment</h2>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="closeModal" class="btn-ghost">Cancel</button>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="datePaid">Date payment made</label>
+          <input id="datePaid" name="datePaid" type="date" required>
+        </div>
+
+        <div class="form-row">
+          <label for="invoice">Invoice #</label>
+          <input id="invoice" name="invoice" type="text" placeholder="e.g. INV-1234" required>
+        </div>
+
+        <div class="form-row">
+          <label for="amount">Amount paid</label>
+          <input id="amount" name="amount" type="number" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+
+        <div class="form-row">
+          <label for="depositedDate">Deposited date (optional)</label>
+          <input id="depositedDate" name="depositedDate" type="date">
+        </div>
+
+        <div class="form-row" style="grid-column:span 2;">
+          <label for="customer">Customer name</label>
+          <input id="customer" name="customer" type="text" placeholder="Customer or payer name" required>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" id="saveBtn">Save payment</button>
+        <button type="button" id="saveAndAddAnother" class="btn-ghost">Save & Add Another</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Payment Tracker v1 — single-file app
+    (function(){
+      const LS_KEY = 'payments_v1';
+      const addBtn = document.getElementById('addBtn');
+      const modal = document.getElementById('modal');
+      const paymentForm = document.getElementById('paymentForm');
+      const closeModal = document.getElementById('closeModal');
+      const paymentsBody = document.getElementById('paymentsBody');
+      const paymentsTable = document.getElementById('paymentsTable');
+      const emptyNotice = document.getElementById('emptyNotice');
+      const searchInput = document.getElementById('search');
+      const fromDate = document.getElementById('fromDate');
+      const toDate = document.getElementById('toDate');
+      const filterDeposited = document.getElementById('filterDeposited');
+      const totalDisplayed = document.getElementById('totalDisplayed');
+      const summaryCount = document.getElementById('summaryCount');
+      const summaryTotal = document.getElementById('summaryTotal');
+      const exportCsvBtn = document.getElementById('exportCsvBtn');
+      const importFile = document.getElementById('importFile');
+      const clearAll = document.getElementById('clearAll');
+      const markAllDeposited = document.getElementById('markAllDeposited');
+      const deleteDisplayed = document.getElementById('deleteDisplayed');
+      const downloadSample = document.getElementById('downloadSample');
+      const saveAndAddAnother = document.getElementById('saveAndAddAnother');
+      const modalTitle = document.getElementById('modalTitle');
+      const saveBtn = document.getElementById('saveBtn');
+
+      // form fields
+      const datePaid = document.getElementById('datePaid');
+      const invoice = document.getElementById('invoice');
+      const amount = document.getElementById('amount');
+      const depositedDate = document.getElementById('depositedDate');
+      const customer = document.getElementById('customer');
+
+      let payments = [];
+      let editingId = null;
+
+      // ---- Utility ----
+      function uid(){ return 'p_' + Math.random().toString(36).slice(2,10); }
+
+      function load(){
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          payments = raw ? JSON.parse(raw) : [];
+        } catch(e){
+          console.error('Failed load', e);
+          payments = [];
+        }
+      }
+
+      function save(){
+        localStorage.setItem(LS_KEY, JSON.stringify(payments));
+      }
+
+      function formatCurrency(n){
+        const v = Number(n) || 0;
+        return v.toLocaleString(undefined, {style:'currency', currency:'USD', maximumFractionDigits:2});
+      }
+
+      function formatDate(d){
+        if(!d) return '';
+        // if already YYYY-MM-DD, show that; else try Date
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+        const dt = new Date(d);
+        if(isNaN(dt)) return d;
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth()+1).padStart(2,'0');
+        const dd = String(dt.getDate()).padStart(2,'0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      function clearForm(){
+        paymentForm.reset();
+        editingId = null;
+        modalTitle.textContent = 'Add Payment';
+      }
+
+      // ---- CRUD ----
+      function addPayment(obj){
+        obj.id = uid();
+        obj.datePaid = formatDate(obj.datePaid);
+        obj.depositedDate = obj.depositedDate ? formatDate(obj.depositedDate) : '';
+        obj.amount = Number(obj.amount) || 0;
+        payments.unshift(obj); // newest first
+        save();
+        render();
+      }
+
+      function updatePayment(id, changes){
+        const idx = payments.findIndex(p => p.id === id);
+        if(idx === -1) return;
+        payments[idx] = Object.assign({}, payments[idx], changes, {
+          datePaid: formatDate(changes.datePaid || payments[idx].datePaid),
+          depositedDate: changes.depositedDate === undefined ? payments[idx].depositedDate : (changes.depositedDate ? formatDate(changes.depositedDate) : ''),
+          amount: Number(changes.amount || payments[idx].amount)
+        });
+        save();
+        render();
+      }
+
+      function removePayment(id){
+        payments = payments.filter(p => p.id !== id);
+        save();
+        render();
+      }
+
+      // ---- Render ----
+      function getFiltered(){
+        const q = searchInput.value.trim().toLowerCase();
+        const from = fromDate.value || null;
+        const to = toDate.value || null;
+        const depos = filterDeposited.value; // all|yes|no
+
+        return payments.filter(p => {
+          if(q){
+            const match = (p.invoice||'').toLowerCase().includes(q) || (p.customer||'').toLowerCase().includes(q);
+            if(!match) return false;
+          }
+          if(from){
+            if(!p.datePaid || p.datePaid < from) return false;
+          }
+          if(to){
+            if(!p.datePaid || p.datePaid > to) return false;
+          }
+          if(depos === 'yes' && !p.depositedDate) return false;
+          if(depos === 'no' && p.depositedDate) return false;
+          return true;
+        });
+      }
+
+      function render(){
+        const list = getFiltered();
+        paymentsBody.innerHTML = '';
+        if(list.length === 0){
+          emptyNotice.style.display = 'block';
+          paymentsTable.style.display = 'none';
+        } else {
+          emptyNotice.style.display = 'none';
+          paymentsTable.style.display = '';
+          for(const p of list){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${escapeHtml(p.datePaid || '')}</td>
+              <td>${escapeHtml(p.invoice || '')}</td>
+              <td>${formatCurrency(p.amount)}</td>
+              <td>${escapeHtml(p.depositedDate || '')}</td>
+              <td>${escapeHtml(p.customer || '')}</td>
+              <td>${p.depositedDate ? '<span class="deposited">Deposited</span>' : '<span class="not-deposited">Not deposited</span>'}</td>
+              <td class="actions">
+                <button data-action="edit" data-id="${p.id}" class="btn-ghost">Edit</button>
+                <button data-action="toggle" data-id="${p.id}" class="btn-ghost">${p.depositedDate ? 'Unset Deposited' : 'Mark Deposited'}</button>
+                <button data-action="delete" data-id="${p.id}" class="btn-ghost">Delete</button>
+              </td>
+            `;
+            paymentsBody.appendChild(tr);
+          }
+        }
+
+        // totals
+        const total = list.reduce((s, p) => s + Number(p.amount||0), 0);
+        totalDisplayed.textContent = formatCurrency(total);
+        summaryCount.textContent = `${payments.length} payments (all)`;
+        summaryTotal.textContent = formatCurrency(payments.reduce((s,p)=>s+Number(p.amount||0),0));
+      }
+
+      // ---- events ----
+      addBtn.addEventListener('click', ()=>{
+        clearForm();
+        openModal();
+      });
+
+      closeModal.addEventListener('click', ()=>{ closeModalFunc(); });
+
+      document.addEventListener('keydown', (e)=>{
+        if(e.key === 'Escape') closeModalFunc();
+      });
+
+      function openModal(){
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden','false');
+        datePaid.focus();
+      }
+      function closeModalFunc(){
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden','true');
+        clearForm();
+      }
+
+      paymentForm.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const payload = {
+          datePaid: datePaid.value,
+          invoice: invoice.value.trim(),
+          amount: Number(amount.value),
+          depositedDate: depositedDate.value || '',
+          customer: customer.value.trim()
+        };
+
+        if(!payload.invoice || !payload.customer || !payload.datePaid || isNaN(payload.amount)) {
+          alert('Please fill required fields: Date, Invoice #, Amount, Customer.');
+          return;
+        }
+
+        if(editingId){
+          updatePayment(editingId, payload);
+        } else {
+          addPayment(payload);
+        }
+
+        closeModalFunc();
+      });
+
+      saveAndAddAnother.addEventListener('click', ()=>{
+        // validate quickly
+        const payload = {
+          datePaid: datePaid.value,
+          invoice: invoice.value.trim(),
+          amount: Number(amount.value),
+          depositedDate: depositedDate.value || '',
+          customer: customer.value.trim()
+        };
+        if(!payload.invoice || !payload.customer || !payload.datePaid || isNaN(payload.amount)) {
+          alert('Please fill required fields: Date, Invoice #, Amount, Customer.');
+          return;
+        }
+        addPayment(payload);
+        // reset form for next entry
+        paymentForm.reset();
+        datePaid.focus();
+      });
+
+      paymentsBody.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if(action === 'edit'){
+          const p = payments.find(x => x.id === id);
+          if(!p) return;
+          editingId = p.id;
+          modalTitle.textContent = 'Edit Payment';
+          datePaid.value = p.datePaid || '';
+          invoice.value = p.invoice || '';
+          amount.value = p.amount || '';
+          depositedDate.value = p.depositedDate || '';
+          customer.value = p.customer || '';
+          openModal();
+        } else if(action === 'delete'){
+          if(confirm('Delete this payment? This cannot be undone.')) removePayment(id);
+        } else if(action === 'toggle'){
+          const p = payments.find(x => x.id===id);
+          if(!p) return;
+          if(p.depositedDate){
+            updatePayment(id, { depositedDate: '' });
+          } else {
+            // mark deposited today by default
+            updatePayment(id, { depositedDate: (new Date()).toISOString().slice(0,10) });
+          }
+        }
+      });
+
+      // filters
+      [searchInput, fromDate, toDate, filterDeposited].forEach(el=>{
+        el.addEventListener('input', ()=> render());
+      });
+
+      // export CSV
+      exportCsvBtn.addEventListener('click', ()=> {
+        if(payments.length === 0){ alert('No payments to export'); return; }
+        const header = ['id','invoice','date_paid','amount','deposited_date','customer'];
+        const rows = payments.map(p => [
+          p.id,
+          csvEscape(p.invoice||''),
+          p.datePaid || '',
+          (Number(p.amount)||0).toFixed(2),
+          p.depositedDate || '',
+          csvEscape(p.customer||'')
+        ]);
+        const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+        downloadFile(csv, 'payments-export.csv', 'text/csv');
+      });
+
+      // import CSV
+      importFile.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = function(){
+          try{
+            const text = reader.result;
+            const parsed = parseCsv(text);
+            // expect columns: invoice, date_paid, amount, deposited_date, customer OR id included
+            let count = 0;
+            for(const row of parsed){
+              // ignore empty rows
+              if(row.length < 3) continue;
+              // try flexible mapping
+              let idx = 0;
+              let maybeId = null;
+              if(parsed.headers && parsed.headers[0] && parsed.headers[0].toLowerCase().includes('id')) {
+                maybeId = row[0];
+                idx = 1;
+              }
+              const invoice_ = (row[idx] || '').trim();
+              const datePaid_ = (row[idx+1] || '').trim();
+              const amount_ = Number((row[idx+2] || '').trim() || 0);
+              const deposited_ = (row[idx+3] || '').trim();
+              const customer_ = (row[idx+4] || '').trim() || (row[idx+3] || '').trim();
+
+              if(!invoice_ || !datePaid_ || isNaN(amount_)) continue;
+              addPayment({
+                invoice: invoice_,
+                datePaid: datePaid_,
+                amount: amount_,
+                depositedDate: deposited_,
+                customer: customer_
+              });
+              count++;
+            }
+            alert(`Imported ${count} payments.`);
+          } catch(err){
+            console.error(err);
+            alert('Failed to parse CSV. Make sure it is in the expected format.');
+          } finally {
+            importFile.value = '';
+          }
+        };
+        reader.readAsText(f);
+      });
+
+      // clear all
+      clearAll.addEventListener('click', ()=>{
+        if(confirm('Clear all payments from this browser?')) {
+          payments = [];
+          save();
+          render();
+        }
+      });
+
+      // mark all displayed as deposited
+      markAllDeposited.addEventListener('click', ()=>{
+        const list = getFiltered();
+        const today = (new Date()).toISOString().slice(0,10);
+        for(const p of list){
+          if(!p.depositedDate){
+            updatePayment(p.id, { depositedDate: today });
+          }
+        }
+      });
+
+      // delete displayed
+      deleteDisplayed.addEventListener('click', ()=>{
+        if(!confirm('Delete all displayed payments? This cannot be undone.')) return;
+        const list = getFiltered();
+        const ids = new Set(list.map(x => x.id));
+        payments = payments.filter(p => !ids.has(p.id));
+        save();
+        render();
+      });
+
+      // sample CSV
+      downloadSample.addEventListener('click', ()=>{
+        const sample = 'invoice,date_paid,amount,deposited_date,customer\nINV-101,2025-10-01,150.00,2025-10-03,Acme Co.\nINV-102,2025-10-05,75.50,,John Smith\n';
+        downloadFile(sample, 'payments-sample.csv','text/csv');
+      });
+
+      function downloadFile(content, filename, mime){
+        const blob = new Blob([content], {type: mime || 'application/octet-stream'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // simple CSV parser (handles quotes)
+      function parseCsv(text){
+        const lines = text.split(/\r\n|\n/);
+        if(lines.length === 0) return [];
+        const rows = [];
+        let headers = null;
+        for(const line of lines){
+          if(line.trim() === '') continue;
+          const row = [];
+          let inQuote = false;
+          let val = '';
+          for(let i=0;i<line.length;i++){
+            const ch = line[i];
+            if(ch === '"' ){
+              if(inQuote && line[i+1] === '"'){ val += '"'; i++; continue; }
+              inQuote = !inQuote;
+              continue;
+            }
+            if(ch === ',' && !inQuote){
+              row.push(val);
+              val = '';
+              continue;
+            }
+            val += ch;
+          }
+          row.push(val);
+          if(!headers){
+            headers = row.map(h => (h||'').trim());
+            rows.push(row);
+          } else {
+            rows.push(row);
+          }
+        }
+        return { headers, rows: rows.slice(1), length: rows.length-1, forEach: function(cb){ this.rows.forEach(cb); } , map: function(cb){ return this.rows.map(cb); } , [Symbol.iterator]: function*(){ yield* this.rows; } };
+      }
+
+      // tiny CSV escape for values with commas/quotes
+      function csvEscape(v){
+        if(v == null) return '';
+        v = String(v);
+        if(v.includes(',') || v.includes('"') || v.includes('\n')){
+          return '"' + v.replace(/"/g,'""') + '"';
+        }
+        return v;
+      }
+
+      function escapeHtml(s){
+        if(s == null) return '';
+        return String(s)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      }
+
+      // initialize demo sample if empty
+      function seedIfEmpty(){
+        if(payments.length === 0){
+          // do not seed if user already has data; only first time
+          const sample = [
+            { invoice:'INV-101', datePaid:'2025-09-15', amount:250.00, depositedDate:'2025-09-17', customer:'Acme LLC' },
+            { invoice:'INV-102', datePaid:'2025-09-20', amount:75.50, depositedDate:'', customer:'Jane Doe' }
+          ];
+          for(const s of sample) addPayment(s);
+        }
+      }
+
+      // load & render
+      load();
+      // only seed if truly empty
+      if(payments.length === 0) {
+        // don't auto-seed with sample data (user may want empty). Let's not seed by default.
+      }
+      render();
+
+      // Helper: ensure imported CSV parsing returns rows array (compatibility)
+      function parseCsv(text){
+        // improved: return array of rows (first row header)
+        const lines = text.split(/\r\n|\n/).filter(l => l.trim() !== '');
+        if(lines.length === 0) return [];
+        const rows = [];
+        for(const line of lines){
+          const row = [];
+          let cur = '';
+          let inQ = false;
+          for(let i=0;i<line.length;i++){
+            const ch = line[i];
+            if(ch === '"'){
+              if(inQ && line[i+1] === '"'){ cur += '"'; i++; continue; }
+              inQ = !inQ;
+              continue;
+            }
+            if(ch === ',' && !inQ){
+              row.push(cur);
+              cur = '';
+              continue;
+            }
+            cur += ch;
+          }
+          row.push(cur);
+          rows.push(row);
+        }
+        // first row may be headers
+        const headers = rows[0].map(h => (h||'').trim());
+        const dataRows = rows.slice(1);
+        return { headers, rows: dataRows };
+      }
+
+      // replace earlier parseCsv with this; ensure importFile handler uses returned structure properly
+      importFile.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = function(){
+          try{
+            const text = reader.result;
+            const parsed = parseCsv(text);
+            const rows = parsed.rows || [];
+            let count = 0;
+            for(const row of rows){
+              // flexible mapping:
+              // if header includes id at index 0, mapping is id,invoice,date,amount,deposited,customer
+              let map = {};
+              const h = parsed.headers.map(hh => hh.toLowerCase());
+              if(h[0] && h[0].includes('id')){
+                map = {
+                  invoice: row[1]||'',
+                  datePaid: row[2]||'',
+                  amount: row[3]||'0',
+                  depositedDate: row[4]||'',
+                  customer: row[5]||'',
+                };
+              } else {
+                // assume invoice,date,amount,deposited,customer
+                map = {
+                  invoice: row[0]||'',
+                  datePaid: row[1]||'',
+                  amount: row[2]||'0',
+                  depositedDate: row[3]||'',
+                  customer: row[4]||'',
+                };
+              }
+              if(!map.invoice || !map.datePaid || isNaN(Number(map.amount))) continue;
+              addPayment({
+                invoice: map.invoice.trim(),
+                datePaid: map.datePaid.trim(),
+                amount: Number(map.amount),
+                depositedDate: map.depositedDate ? map.depositedDate.trim() : '',
+                customer: (map.customer || '').trim(),
+              });
+              count++;
+            }
+            alert('Imported ' + count + ' rows.');
+          } catch(err){
+            console.error(err);
+            alert('Error importing CSV.');
+          } finally {
+            importFile.value = '';
+          }
+        };
+        reader.readAsText(f);
+      });
+
+      // done
+    })();
+  </script>
+</body>
+</html>
