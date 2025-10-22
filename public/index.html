@@ -1,44 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financial Tracker</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .btn-ghost { margin-right: 4px; cursor: pointer; }
-    .show { display: block !important; }
-    #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
-    #modal form { background:white; margin:50px auto; padding:20px; max-width:400px; }
-  </style>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Tracker</title>
+<style>
+body { font-family: sans-serif; padding: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+.btn-ghost { margin-right: 4px; cursor: pointer; }
+.show { display: block !important; }
+#modal, #authModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+.modal-content { background:white; margin:50px auto; padding:20px; max-width:400px; }
+</style>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <h1>Financial Tracker</h1>
 
+<!-- Auth Section -->
 <div id="authSection">
+  <span id="currentUser"></span>
   <button id="loginBtn">Login</button>
   <button id="signupBtn">Register</button>
-  <span id="currentUser"></span>
+  <button id="logoutBtn" style="display:none;">Logout</button>
 </div>
 
-<button id="addBtn">Add Payment</button>
-<button id="exportCsvBtn">Export CSV</button>
-<input type="file" id="importFile">
-<button id="clearAll">Clear All</button>
+<!-- Filters -->
+<div>
+  <input id="search" placeholder="Search Invoice/Customer">
+  <input type="date" id="fromDate">
+  <input type="date" id="toDate">
+  <select id="filterDeposited">
+    <option value="">All</option>
+    <option value="yes">Deposited</option>
+    <option value="no">Not Deposited</option>
+  </select>
+</div>
 
-<input id="search" placeholder="Search Invoice/Customer">
-<input type="date" id="fromDate">
-<input type="date" id="toDate">
-<select id="filterDeposited">
-  <option value="">All</option>
-  <option value="yes">Deposited</option>
-  <option value="no">Not Deposited</option>
-</select>
+<!-- Payment actions -->
+<div>
+  <button id="addBtn">Add Payment</button>
+  <button id="exportCsvBtn">Export CSV</button>
+  <input type="file" id="importFile">
+  <button id="clearAll">Clear All</button>
+</div>
 
+<!-- Payment table -->
 <table>
   <thead>
     <tr>
@@ -53,23 +62,25 @@
   </thead>
   <tbody id="paymentsBody"></tbody>
 </table>
-
 <p>Total: <span id="totalDisplayed"></span></p>
 <p id="emptyNotice" style="display:none;">No payments found.</p>
 
+<!-- Payment modal -->
 <div id="modal">
-  <form id="paymentForm">
-    <label>Date Paid: <input type="date" id="datePaid" required></label><br>
-    <label>Invoice: <input type="text" id="invoice" required></label><br>
-    <label>Amount: <input type="number" step="0.01" id="amount" required></label><br>
-    <label>Deposited Date: <input type="date" id="depositedDate"></label><br>
-    <label>Customer: <input type="text" id="customer" required></label><br>
-    <button type="submit">Save</button>
-    <button type="button" id="saveAndAddAnother">Save & Add Another</button>
-    <button type="button" id="closeModal">Cancel</button>
-  </form>
+  <div class="modal-content">
+    <form id="paymentForm">
+      <label>Date Paid: <input type="date" id="datePaid" required></label><br>
+      <label>Invoice: <input type="text" id="invoice" required></label><br>
+      <label>Amount: <input type="number" step="0.01" id="amount" required></label><br>
+      <label>Deposited Date: <input type="date" id="depositedDate"></label><br>
+      <label>Customer: <input type="text" id="customer" required></label><br>
+      <button type="submit">Save</button>
+      <button type="button" id="saveAndAddAnother">Save & Add Another</button>
+      <button type="button" id="closeModal">Cancel</button>
+    </form>
+  </div>
 </div>
 
-<script src="script.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
