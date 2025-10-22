@@ -1,113 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Payment Tracker</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financial Tracker</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .btn-ghost { margin-right: 4px; cursor: pointer; }
+    .show { display: block !important; }
+    #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+    #modal form { background:white; margin:50px auto; padding:20px; max-width:400px; }
+  </style>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>Payment Tracker</h1>
-      <div class="tiny">Track payments outside your system</div>
-      <div class="top-actions">
-        <button id="addBtn">+ Add Payment</button>
-        <button id="exportCsvBtn" class="btn-ghost">Export CSV</button>
-        <label class="import-label">
-          Import CSV
-          <input id="importFile" type="file" accept=".csv" class="file-input">
-        </label>
-        <button id="clearAll" class="btn-ghost">Clear All</button>
-      </div>
-    </header>
 
-    <div class="card">
-      <div class="controls">
-        <div>
-          <label for="search">Search</label>
-          <input id="search" type="text" placeholder="Invoice # or Customer">
-        </div>
-        <div>
-          <label for="fromDate">From</label>
-          <input id="fromDate" type="date">
-        </div>
-        <div>
-          <label for="toDate">To</label>
-          <input id="toDate" type="date">
-        </div>
-        <div>
-          <label for="filterDeposited">Deposited</label>
-          <select id="filterDeposited">
-            <option value="all">All</option>
-            <option value="yes">Deposited</option>
-            <option value="no">Not Deposited</option>
-          </select>
-        </div>
-        <div class="total-display">
-          <div class="small">Total Displayed</div>
-          <div id="totalDisplayed" class="total">$0.00</div>
-        </div>
-      </div>
+<h1>Financial Tracker</h1>
 
-      <div class="main-grid">
-        <div>
-          <table id="paymentsTable">
-            <thead>
-              <tr>
-                <th>Date Paid</th>
-                <th>Invoice #</th>
-                <th>Amount</th>
-                <th>Deposited Date</th>
-                <th>Customer</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="paymentsBody"></tbody>
-          </table>
-          <div id="emptyNotice" class="empty">No payments yet — click "Add Payment".</div>
-        </div>
-      </div>
-    </div>
+<div id="authSection">
+  <button id="loginBtn">Login</button>
+  <button id="signupBtn">Register</button>
+  <span id="currentUser"></span>
+</div>
 
-    <footer>Saved locally on this browser. Use Export to backup.</footer>
-  </div>
+<button id="addBtn">Add Payment</button>
+<button id="exportCsvBtn">Export CSV</button>
+<input type="file" id="importFile">
+<button id="clearAll">Clear All</button>
 
-  <!-- Modal -->
-  <div id="modal" class="modal">
-    <form id="paymentForm" class="form">
-      <h2 id="modalTitle">Add Payment</h2>
-      <button type="button" id="closeModal" class="btn-ghost">Cancel</button>
-      <div class="form-grid">
-        <div class="form-row">
-          <label>Date payment made</label>
-          <input type="date" id="datePaid" required>
-        </div>
-        <div class="form-row">
-          <label>Invoice #</label>
-          <input type="text" id="invoice" required>
-        </div>
-        <div class="form-row">
-          <label>Amount paid</label>
-          <input type="number" id="amount" step="0.01" min="0" required>
-        </div>
-        <div class="form-row">
-          <label>Deposited date (optional)</label>
-          <input type="date" id="depositedDate">
-        </div>
-        <div class="form-row">
-          <label>Customer name</label>
-          <input type="text" id="customer" required>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button type="submit">Save Payment</button>
-        <button type="button" id="saveAndAddAnother" class="btn-ghost">Save & Add Another</button>
-      </div>
-    </form>
-  </div>
+<input id="search" placeholder="Search Invoice/Customer">
+<input type="date" id="fromDate">
+<input type="date" id="toDate">
+<select id="filterDeposited">
+  <option value="">All</option>
+  <option value="yes">Deposited</option>
+  <option value="no">Not Deposited</option>
+</select>
 
-  <script src="/script.js"></script>
+<table>
+  <thead>
+    <tr>
+      <th>Date Paid</th>
+      <th>Invoice</th>
+      <th>Amount</th>
+      <th>Deposited Date</th>
+      <th>Customer</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="paymentsBody"></tbody>
+</table>
+
+<p>Total: <span id="totalDisplayed"></span></p>
+<p id="emptyNotice" style="display:none;">No payments found.</p>
+
+<div id="modal">
+  <form id="paymentForm">
+    <label>Date Paid: <input type="date" id="datePaid" required></label><br>
+    <label>Invoice: <input type="text" id="invoice" required></label><br>
+    <label>Amount: <input type="number" step="0.01" id="amount" required></label><br>
+    <label>Deposited Date: <input type="date" id="depositedDate"></label><br>
+    <label>Customer: <input type="text" id="customer" required></label><br>
+    <button type="submit">Save</button>
+    <button type="button" id="saveAndAddAnother">Save & Add Another</button>
+    <button type="button" id="closeModal">Cancel</button>
+  </form>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
