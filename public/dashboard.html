@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard · Financial Tracker</title>
+  <script type="module" src="dashboard.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 { color: #0066ff; }
+    input, button {
+      margin: 6px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0066ff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background-color: #004bcc; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    th { background-color: #0066ff; color: white; }
+    .logout { background-color: #dc3545; float: right; }
+    .logout:hover { background-color: #b02a37; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="logout" id="logoutBtn">Logout</button>
+    <h2>Financial Tracker Dashboard</h2>
+    <p id="welcome"></p>
+
+    <h3>Add New Payment</h3>
+    <input type="number" id="amount" placeholder="Amount" />
+    <input type="text" id="description" placeholder="Description" />
+    <button id="addPaymentBtn">Add Payment</button>
+
+    <h3>Recent Payments</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Amount</th>
+          <th>Description</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="paymentsTable"></tbody>
+    </table>
+  </div>
+</body>
+</html>
