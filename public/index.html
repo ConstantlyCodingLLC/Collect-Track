@@ -1,82 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Supabase Connection Test</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financial Tracker + User Directory</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f4f8;
-      color: #333;
-      text-align: center;
-      padding: 50px;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
     button {
-      background: #0051ff;
+      background-color: #0066ff;
       color: white;
-      border: none;
-      padding: 10px 20px;
-      font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
-      border-radius: 8px;
+      border: none;
     }
-    button:hover { background: #003ecb; }
-    pre {
+    button:hover { background-color: #004bcc; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
       text-align: left;
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 20px;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 8px;
+    }
+    th {
+      background: #0066ff;
+      color: white;
+    }
+    .hidden { display: none; }
+    .tab-btn {
+      width: 48%;
+      background: #f4f4f4;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .tab-btn.active {
+      background: #0066ff;
+      color: #fff;
     }
   </style>
 </head>
 <body>
-  <h1>Supabase Connection Test</h1>
-  <p>Click below to test database connection.</p>
+  <!-- AUTH SECTION -->
+  <div class="container" id="auth-section">
+    <h2>Login / Register</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <p id="authMessage"></p>
+  </div>
 
-  <button id="testConnection">Test Connection</button>
-  <button id="insertData">Insert Test Data</button>
+  <!-- APP SECTION -->
+  <div class="container hidden" id="app-section">
+    <h2>Financial Tracker</h2>
+    <p id="welcome"></p>
+    <div style="display:flex; justify-content:space-between;">
+      <button id="trackerTab" class="tab-btn active">My Payments</button>
+      <button id="directoryTab" class="tab-btn">User Directory</button>
+    </div>
 
-  <pre id="output">Waiting for test...</pre>
+    <!-- PAYMENT TRACKER -->
+    <div id="trackerView">
+      <input type="number" id="amount" placeholder="Payment Amount" />
+      <input type="text" id="description" placeholder="Description" />
+      <button id="addPaymentBtn">Add Payment</button>
+      <table>
+        <thead>
+          <tr><th>Amount</th><th>Description</th><th>Date</th></tr>
+        </thead>
+        <tbody id="paymentsTable"></tbody>
+      </table>
+    </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- USER DIRECTORY -->
+    <div id="directoryView" class="hidden">
+      <h3>All Users</h3>
+      <table>
+        <thead>
+          <tr><th>User Email</th><th>Total Payments ($)</th></tr>
+        </thead>
+        <tbody id="userDirectoryTable"></tbody>
+      </table>
+    </div>
+
+    <button id="logoutBtn">Logout</button>
+  </div>
+
   <script>
-    // ✅ Your Supabase credentials
+    // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const output = document.getElementById("output");
+    // --- ELEMENTS ---
+    const authSection = document.getElementById('auth-section');
+    const appSection = document.getElementById('app-section');
+    const paymentsTable = document.getElementById('paymentsTable');
+    const userDirectoryTable = document.getElementById('userDirectoryTable');
+    const welcome = document.getElementById('welcome');
+    const authMessage = document.getElementById('authMessage');
+    const trackerView = document.getElementById('trackerView');
+    const directoryView = document.getElementById('directoryView');
+    const trackerTab = document.getElementById('trackerTab');
+    const directoryTab = document.getElementById('directoryTab');
 
-    // 🧪 Test connection: read from "users" table
-    document.getElementById("testConnection").addEventListener("click", async () => {
-      output.textContent = "Testing connection...";
-      const { data, error } = await supabase.from("users").select("*").limit(1);
+    // --- LOGIN ---
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        output.textContent = "❌ Connection failed:\n" + error.message;
+        authMessage.textContent = "❌ Login failed: " + error.message;
       } else {
-        output.textContent = "✅ Connection successful!\n\nSample data:\n" + JSON.stringify(data, null, 2);
+        authMessage.textContent = "✅ Login successful!";
+        showApp(data.user);
       }
     });
 
-    // 🧩 Insert test data into payments (change table if needed)
-    document.getElementById("insertData").addEventListener("click", async () => {
-      output.textContent = "Inserting test data...";
-      const { data, error } = await supabase.from("payments").insert([
-        { amount: 100.00, description: "Test Payment", category: "Testing", payment_date: new Date().toISOString(), user_id: "test_user" }
+    // --- REGISTER ---
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        authMessage.textContent = "❌ Registration failed: " + error.message;
+      } else {
+        authMessage.textContent = "✅ Registered successfully! You can now login.";
+      }
+    });
+
+    // --- LOGOUT ---
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      appSection.classList.add('hidden');
+      authSection.classList.remove('hidden');
+      document.getElementById('email').value = "";
+      document.getElementById('password').value = "";
+    });
+
+    // --- SHOW APP AFTER LOGIN ---
+    async function showApp(user) {
+      authSection.classList.add('hidden');
+      appSection.classList.remove('hidden');
+      welcome.textContent = `Welcome, ${user.email}!`;
+      loadPayments(user.id);
+      loadUserDirectory(); // Show directory on login for admin-style testing
+    }
+
+    // --- ADD PAYMENT ---
+    document.getElementById('addPaymentBtn').addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('amount').value);
+      const description = document.getElementById('description').value;
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("Please log in first.");
+        return;
+      }
+
+      const { error } = await supabase.from('payments').insert([
+        {
+          amount,
+          description,
+          payment_date: new Date().toISOString(),
+          user_id: user.id
+        }
       ]);
+
       if (error) {
-        output.textContent = "❌ Insert failed:\n" + error.message;
+        alert("❌ Insert failed: " + error.message);
       } else {
-        output.textContent = "✅ Insert successful!\n" + JSON.stringify(data, null, 2);
+        alert("✅ Payment added successfully!");
+        document.getElementById('amount').value = "";
+        document.getElementById('description').value = "";
+        loadPayments(user.id);
+        loadUserDirectory();
       }
     });
+
+    // --- LOAD USER'S PAYMENTS ---
+    async function loadPayments(userId) {
+      const { data, error } = await supabase.from('payments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('payment_date', { ascending: false });
+
+      paymentsTable.innerHTML = "";
+      if (error || !data.length) {
+        paymentsTable.innerHTML = "<tr><td colspan='3'>No payments yet</td></tr>";
+        return;
+      }
+
+      data.forEach(p => {
+        const row = `<tr>
+          <td>$${p.amount.toFixed(2)}</td>
+          <td>${p.description}</td>
+          <td>${new Date(p.payment_date).toLocaleString()}</td>
+        </tr>`;
+        paymentsTable.innerHTML += row;
+      });
+    }
+
+    // --- LOAD USER DIRECTORY ---
+    async function loadUserDirectory() {
+      const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+      if (userError) {
+        userDirectoryTable.innerHTML = `<tr><td colspan='2'>Unable to load users (requires service role key)</td></tr>`;
+        return;
+      }
+
+      userDirectoryTable.innerHTML = "";
+      for (const user of users.users) {
+        const { data: payments, error } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('user_id', user.id);
+
+        const total = payments?.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0) || 0;
+
+        userDirectoryTable.innerHTML += `
+          <tr>
+            <td>${user.email}</td>
+            <td>$${total.toFixed(2)}</td>
+          </tr>`;
+      }
+    }
+
+    // --- TAB SWITCHING ---
+    trackerTab.addEventListener('click', () => {
+      trackerTab.classList.add('active');
+      directoryTab.classList.remove('active');
+      trackerView.classList.remove('hidden');
+      directoryView.classList.add('hidden');
+    });
+    directoryTab.addEventListener('click', () => {
+      directoryTab.classList.add('active');
+      trackerTab.classList.remove('active');
+      directoryView.classList.remove('hidden');
+      trackerView.classList.add('hidden');
+      loadUserDirectory();
+    });
+
+    // --- AUTO LOGIN CHECK ---
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) showApp(user);
+    })();
   </script>
 </body>
 </html>
