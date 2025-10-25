@@ -1,85 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Financial Tracker</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Connection Test</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    input, button {
-      width: 100%;
-      margin: 8px 0;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+      background: #f2f4f8;
+      color: #333;
+      text-align: center;
+      padding: 50px;
     }
     button {
-      background-color: #0066ff;
+      background: #0051ff;
       color: white;
-      font-weight: bold;
-      cursor: pointer;
       border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 8px;
     }
-    button:hover { background-color: #004bcc; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    th, td {
-      border: 1px solid #ccc;
+    button:hover { background: #003ecb; }
+    pre {
       text-align: left;
-      padding: 8px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    th {
-      background: #0066ff;
-      color: white;
-    }
-    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div class="container" id="auth-section">
-    <h2>Login / Register</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-  </div>
+  <h1>Supabase Connection Test</h1>
+  <p>Click below to test database connection.</p>
 
-  <div class="container hidden" id="app-section">
-    <h2>Financial Tracker</h2>
-    <p id="welcome"></p>
-    <input type="number" id="amount" placeholder="Payment Amount" />
-    <input type="text" id="description" placeholder="Description" />
-    <button id="addPaymentBtn">Add Payment</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Amount</th>
-          <th>Description</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody id="paymentsTable"></tbody>
-    </table>
-    <button id="logoutBtn">Logout</button>
-  </div>
+  <button id="testConnection">Test Connection</button>
+  <button id="insertData">Insert Test Data</button>
 
-  <script src="script.js"></script>
+  <pre id="output">Waiting for test...</pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ✅ Your Supabase credentials
+    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const output = document.getElementById("output");
+
+    // 🧪 Test connection: read from "users" table
+    document.getElementById("testConnection").addEventListener("click", async () => {
+      output.textContent = "Testing connection...";
+      const { data, error } = await supabase.from("users").select("*").limit(1);
+      if (error) {
+        output.textContent = "❌ Connection failed:\n" + error.message;
+      } else {
+        output.textContent = "✅ Connection successful!\n\nSample data:\n" + JSON.stringify(data, null, 2);
+      }
+    });
+
+    // 🧩 Insert test data into payments (change table if needed)
+    document.getElementById("insertData").addEventListener("click", async () => {
+      output.textContent = "Inserting test data...";
+      const { data, error } = await supabase.from("payments").insert([
+        { amount: 100.00, description: "Test Payment", category: "Testing", payment_date: new Date().toISOString(), user_id: "test_user" }
+      ]);
+      if (error) {
+        output.textContent = "❌ Insert failed:\n" + error.message;
+      } else {
+        output.textContent = "✅ Insert successful!\n" + JSON.stringify(data, null, 2);
+      }
+    });
+  </script>
 </body>
 </html>
