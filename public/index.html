@@ -165,14 +165,15 @@
 
       const { error } = await supabase.from('payments').insert([{
         user_email,
-        created_by: user.id,
+        created_by: user_email
         invoice,
         customer,
-        amount,
-        date_paid,
-        deposited,
-        deposited_date
-      }]);
+          amount,
+          date_paid,
+          deposited,
+          deposited_date
+        }]);
+        
 
       if (error) showMessage("❌ Insert failed: " + error.message, "error");
       else {
