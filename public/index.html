@@ -1,211 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Financial Tracker + User Directory</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    input, button { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
-    button { background-color: #0066ff; color: white; font-weight: bold; cursor: pointer; border: none; }
-    button:hover { background-color: #004bcc; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; text-align: left; padding: 8px; }
-    th { background: #0066ff; color: white; }
-    .hidden { display: none; }
-    .tab-btn { width: 48%; background: #f4f4f4; color: #333; border: 1px solid #ccc; }
-    .tab-btn.active { background: #0066ff; color: #fff; }
-    #messageBox { margin-top: 15px; padding: 10px; border-radius: 8px; text-align: center; }
-    .success { background: #e6ffed; color: #056608; }
-    .error { background: #ffe6e6; color: #a30000; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Financial Tracker + User Directory</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 20px; }
+  .container { max-width: 650px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+  input, button { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+  button { background-color: #6a0dad; color: white; font-weight: bold; cursor: pointer; border: none; }
+  button:hover { background-color: #4b0082; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+  th, td { border: 1px solid #ccc; text-align: left; padding: 8px; }
+  th { background: #6a0dad; color: white; }
+  .hidden { display: none; }
+  .tab-btn { width: 48%; background: #f4f4f4; color: #333; border: 1px solid #ccc; }
+  .tab-btn.active { background: #6a0dad; color: #fff; }
+  #messageBox { margin-top: 15px; padding: 10px; border-radius: 8px; text-align: center; }
+  .success { background: #e6ffed; color: #056608; }
+  .error { background: #ffe6e6; color: #a30000; }
+  .logo { text-align:center; margin-bottom: 20px; }
+  .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+</style>
 </head>
 <body>
-  <!-- AUTH SECTION -->
-  <div class="container" id="auth-section">
-    <h2>Login / Register</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-    <p id="authMessage"></p>
+
+<div class="logo">
+  <h1>💰 FinTrack</h1>
+</div>
+
+<!-- AUTH SECTION -->
+<div class="container" id="auth-section">
+  <h2>Login / Register</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button id="loginBtn">Login</button>
+  <button id="registerBtn">Register</button>
+  <p id="authMessage"></p>
+</div>
+
+<!-- APP SECTION -->
+<div class="container hidden" id="app-section">
+  <h2>Financial Tracker</h2>
+  <p id="welcome"></p>
+  <div style="display:flex; justify-content:space-between;">
+    <button id="trackerTab" class="tab-btn active">My Payments</button>
+    <button id="directoryTab" class="tab-btn">User Directory</button>
   </div>
 
-  <!-- APP SECTION -->
-  <div class="container hidden" id="app-section">
-    <h2>Financial Tracker</h2>
-    <p id="welcome"></p>
-    <div style="display:flex; justify-content:space-between;">
-      <button id="trackerTab" class="tab-btn active">My Payments</button>
-      <button id="directoryTab" class="tab-btn">User Directory</button>
-    </div>
+  <!-- PAYMENT TRACKER -->
+  <div id="trackerView">
+    <input type="text" id="invoice" placeholder="Invoice #" required/>
+    <input type="text" id="customer" placeholder="Customer Name" required/>
+    <input type="number" id="amount" placeholder="Amount ($)" step="0.01" required/>
+    <input type="date" id="date_paid" required/>
+    <label><input type="checkbox" id="deposited" /> Deposited?</label>
+    <input type="date" id="deposited_date" placeholder="Deposited Date" required/>
+    <button id="addPaymentBtn">Add Payment</button>
+    <button id="exportBtn">Export Payments CSV</button>
 
-    <!-- PAYMENT TRACKER -->
-    <div id="trackerView">
-      <input type="text" id="invoice" placeholder="Invoice #" />
-      <input type="text" id="customer" placeholder="Customer Name" />
-      <input type="number" id="amount" placeholder="Amount ($)" step="0.01" />
-      <input type="date" id="date_paid" />
-      <label><input type="checkbox" id="deposited" /> Deposited?</label>
-      <input type="date" id="deposited_date" placeholder="Deposited Date" />
-      <button id="addPaymentBtn">Add Payment</button>
+    <div id="messageBox"></div>
 
-      <div id="messageBox"></div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Invoice</th>
-            <th>Customer</th>
-            <th>Amount</th>
-            <th>Date Paid</th>
-            <th>Deposited</th>
-            <th>Deposited Date</th>
-          </tr>
-        </thead>
-        <tbody id="paymentsTable"></tbody>
-      </table>
-    </div>
-
-    <!-- USER DIRECTORY -->
-    <div id="directoryView" class="hidden">
-      <h3>All Users</h3>
-      <table>
-        <thead>
-          <tr><th>User Email</th><th>Total Payments ($)</th></tr>
-        </thead>
-        <tbody id="userDirectoryTable"></tbody>
-      </table>
-    </div>
-
-    <button id="logoutBtn">Logout</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Date Paid</th>
+          <th>Deposited</th>
+          <th>Deposited Date</th>
+        </tr>
+      </thead>
+      <tbody id="paymentsTable"></tbody>
+    </table>
   </div>
 
-  <script>
+  <!-- USER DIRECTORY -->
+  <div id="directoryView" class="hidden">
+    <h3>All Users</h3>
+    <table>
+      <thead>
+        <tr><th>User Email</th><th>Total Payments ($)</th></tr>
+      </thead>
+      <tbody id="userDirectoryTable"></tbody>
+    </table>
+  </div>
+
+  <button id="logoutBtn">Logout</button>
+</div>
+
+<script>
+    // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "YOUR_SUPABASE_KEY_HERE";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const authSection = document.getElementById('auth-section');
-    const appSection = document.getElementById('app-section');
-    const paymentsTable = document.getElementById('paymentsTable');
-    const userDirectoryTable = document.getElementById('userDirectoryTable');
-    const welcome = document.getElementById('welcome');
-    const authMessage = document.getElementById('authMessage');
-    const trackerView = document.getElementById('trackerView');
-    const directoryView = document.getElementById('directoryView');
-    const trackerTab = document.getElementById('trackerTab');
-    const directoryTab = document.getElementById('directoryTab');
-    const messageBox = document.getElementById('messageBox');
 
-    function showMessage(msg, type="success") {
-      messageBox.textContent = msg;
-      messageBox.className = type === "error" ? "error" : "success";
-      setTimeout(() => (messageBox.textContent = ""), 4000);
-    }
+const authSection = document.getElementById('auth-section');
+const appSection = document.getElementById('app-section');
+const paymentsTable = document.getElementById('paymentsTable');
+const userDirectoryTable = document.getElementById('userDirectoryTable');
+const welcome = document.getElementById('welcome');
+const authMessage = document.getElementById('authMessage');
+const trackerView = document.getElementById('trackerView');
+const directoryView = document.getElementById('directoryView');
+const trackerTab = document.getElementById('trackerTab');
+const directoryTab = document.getElementById('directoryTab');
+const messageBox = document.getElementById('messageBox');
 
-    // LOGIN
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) authMessage.textContent = "❌ Login failed: " + error.message;
-      else { authMessage.textContent = "✅ Login successful!"; showApp(data.user); }
-    });
+function showMessage(msg, type="success") {
+  messageBox.textContent = msg;
+  messageBox.className = type === "error" ? "error" : "success";
+  setTimeout(() => (messageBox.textContent = ""), 4000);
+}
 
-    // REGISTER
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) authMessage.textContent = "❌ Registration failed: " + error.message;
-      else authMessage.textContent = "✅ Registered successfully! You can now login.";
-    });
+// LOGIN
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) authMessage.textContent = "❌ Login failed: " + error.message;
+  else { authMessage.textContent = "✅ Login successful!"; showApp(data.user); }
+});
 
-    // LOGOUT
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      appSection.classList.add('hidden');
-      authSection.classList.remove('hidden');
-      document.getElementById('email').value = "";
-      document.getElementById('password').value = "";
-    });
+// REGISTER
+document.getElementById('registerBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) authMessage.textContent = "❌ Registration failed: " + error.message;
+  else authMessage.textContent = "✅ Registered successfully! You can now login.";
+});
 
-    // SHOW APP
-    async function showApp(user) {
-      authSection.classList.add('hidden');
-      appSection.classList.remove('hidden');
-      welcome.textContent = `Welcome, ${user.email}!`;
-      loadPayments(user.id);
-      loadUserDirectory();
-    }
+// LOGOUT
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  appSection.classList.add('hidden');
+  authSection.classList.remove('hidden');
+  document.getElementById('email').value = "";
+  document.getElementById('password').value = "";
+});
 
-    // ADD PAYMENT
-    document.getElementById('addPaymentBtn').addEventListener('click', async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return showMessage("Please log in first.", "error");
+// SHOW APP
+async function showApp(user) {
+  authSection.classList.add('hidden');
+  appSection.classList.remove('hidden');
+  welcome.textContent = `Welcome, ${user.email}!`;
+  loadPayments(user.id);
+}
 
-      const invoice = document.getElementById('invoice').value.trim();
-      const customer = document.getElementById('customer').value.trim();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const date_paid = document.getElementById('date_paid').value;
-      const deposited = document.getElementById('deposited').checked;
-      const deposited_date = document.getElementById('deposited_date').value || null;
+// ADD PAYMENT
+document.getElementById('addPaymentBtn').addEventListener('click', async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return showMessage("Please log in first.", "error");
 
-      if (!invoice || !customer || !amount || !date_paid) {
-        showMessage("Invoice, Amount, Customer, and Date Paid are required.", "error");
-        return;
-      }
+  const invoice = document.getElementById('invoice').value.trim();
+  const customer = document.getElementById('customer').value.trim();
+  const amount = parseFloat(document.getElementById('amount').value);
+  const date_paid = document.getElementById('date_paid').value;
+  const deposited = document.getElementById('deposited').checked;
+  const deposited_date = document.getElementById('deposited_date').value;
 
-      const { error } = await supabase.from('payments').insert([{
-  created_by: user.id, // <-- UUID
-  invoice,
-  customer,
-  amount,
-  date_paid,
-  deposited,
-  deposited_date
-}]);
+  // Validate all fields
+  if (!invoice || !customer || !amount || !date_paid || !deposited_date) {
+    showMessage("All fields are required.", "error");
+    return;
+  }
 
-      if (error) showMessage("❌ Insert failed: " + error.message, "error");
-      else {
-        showMessage("✅ Payment added successfully!");
-        loadPayments(user.id);
-        document.querySelectorAll('#trackerView input').forEach(i => { if(i.type==='checkbox') i.checked=false; else i.value=''; });
-      }
-    });
+  const { error } = await supabase.from('payments').insert([{
+    created_by: user.id,
+    invoice,
+    customer,
+    amount,
+    date_paid,
+    deposited,
+    deposited_date
+  }]);
 
-    // LOAD PAYMENTS
-    async function loadPayments(user_id) {
-      const { data, error } = await supabase.from('payments')
-        .select('*')
-        .eq('created_by', user_id)
-        .order('date_paid', { ascending: false });
+  if (error) showMessage("❌ Insert failed: " + error.message, "error");
+  else {
+    showMessage("✅ Payment added successfully!");
+    loadPayments(user.id);
+    document.querySelectorAll('#trackerView input').forEach(i => { if(i.type==='checkbox') i.checked=false; else i.value=''; });
+  }
+});
 
-      paymentsTable.innerHTML = "";
-      if (error || !data?.length) { paymentsTable.innerHTML = "<tr><td colspan='6'>No payments yet</td></tr>"; return; }
+// EXPORT CSV
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return showMessage("Please log in first.", "error");
 
-      data.forEach(p => {
-        paymentsTable.innerHTML += `
-          <tr>
-            <td>${p.invoice}</td>
-            <td>${p.customer}</td>
-            <td>$${p.amount.toFixed(2)}</td>
-            <td>${p.date_paid}</td>
-            <td>${p.deposited ? '✅' : '❌'}</td>
-            <td>${p.deposited_date || '-'}</td>
-          </tr>`;
-      });
-    }
+  const { data, error } = await supabase.from('payments').select('*').eq('created_by', user.id);
+  if (error || !data.length) return showMessage("No payments to export.", "error");
 
-    // TAB SWITCHING
-    trackerTab.addEventListener('click', () => { trackerTab.classList.add('active'); directoryTab.classList.remove('active'); trackerView.classList.remove('hidden'); directoryView.classList.add('hidden'); });
-    directoryTab.addEventListener('click', () => { directoryTab.classList.add('active'); trackerTab.classList.remove('active'); directoryView.classList.remove('hidden'); trackerView.classList.add('hidden'); });
+  const csv = [
+    Object.keys(data[0]).join(','), // headers
+    ...data.map(row => Object.values(row).map(v => `"${v}"`).join(','))
+  ].join('\n');
 
-    // AUTO LOGIN CHECK
-    (async () => { const { data: { user } } = await supabase.auth.getUser(); if (user) showApp(user); })();
-  </script>
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'payments.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showMessage("✅ CSV Exported successfully!");
+});
+
+// LOAD PAYMENTS
+async function loadPayments(user_id) {
+  const { data, error } = await supabase.from('payments')
+    .select('*')
+    .eq('created_by', user_id)
+    .order('date_paid', { ascending: false });
+
+  paymentsTable.innerHTML = "";
+  if (error || !data?.length) { paymentsTable.innerHTML = "<tr><td colspan='6'>No payments yet</td></tr>"; return; }
+
+  data.forEach(p => {
+    paymentsTable.innerHTML += `
+      <tr>
+        <td>${p.invoice}</td>
+        <td>${p.customer}</td>
+        <td>$${p.amount.toFixed(2)}</td>
+        <td>${p.date_paid}</td>
+        <td>${p.deposited ? '✅' : '❌'}</td>
+        <td>${p.deposited_date || '-'}</td>
+      </tr>`;
+  });
+}
+
+// TAB SWITCHING
+trackerTab.addEventListener('click', () => { trackerTab.classList.add('active'); directoryTab.classList.remove('active'); trackerView.classList.remove('hidden'); directoryView.classList.add('hidden'); });
+directoryTab.addEventListener('click', () => { directoryTab.classList.add('active'); trackerTab.classList.remove('active'); directoryView.classList.remove('hidden'); trackerView.classList.add('hidden'); });
+
+// AUTO LOGIN CHECK
+(async () => { const { data: { user } } = await supabase.auth.getUser(); if (user) showApp(user); })();
+</script>
 </body>
 </html>
