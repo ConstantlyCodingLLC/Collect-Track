@@ -20,7 +20,7 @@
       padding: 20px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    input, select, button {
+    input, button {
       width: 100%;
       margin: 8px 0;
       padding: 10px;
@@ -94,11 +94,10 @@
     <div id="trackerView">
       <input type="text" id="invoice" placeholder="Invoice #" />
       <input type="text" id="customer" placeholder="Customer Name" />
-      <input type="number" id="amount" placeholder="Amount ($)" />
-      <input type="date" id="date_paid" placeholder="Date Paid" />
+      <input type="number" id="amount" placeholder="Amount ($)" step="0.01" />
+      <input type="date" id="date_paid" />
       <label><input type="checkbox" id="deposited" /> Deposited?</label>
       <input type="date" id="deposited_date" placeholder="Deposited Date" />
-      <input type="text" id="company_id" placeholder="Company ID" />
       <button id="addPaymentBtn">Add Payment</button>
 
       <div id="messageBox"></div>
@@ -133,12 +132,12 @@
   </div>
 
   <script>
-    // --- SUPABASE CONFIG ---
+       // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- ELEMENTS ---
+
     const authSection = document.getElementById('auth-section');
     const appSection = document.getElementById('app-section');
     const paymentsTable = document.getElementById('paymentsTable');
@@ -157,19 +156,16 @@
       setTimeout(() => (messageBox.textContent = ""), 4000);
     }
 
-    // --- LOGIN ---
+    // LOGIN
     document.getElementById('loginBtn').addEventListener('click', async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) authMessage.textContent = "❌ Login failed: " + error.message;
-      else {
-        authMessage.textContent = "✅ Login successful!";
-        showApp(data.user);
-      }
+      else { authMessage.textContent = "✅ Login successful!"; showApp(data.user); }
     });
 
-    // --- REGISTER ---
+    // REGISTER
     document.getElementById('registerBtn').addEventListener('click', async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
@@ -178,7 +174,7 @@
       else authMessage.textContent = "✅ Registered successfully! You can now login.";
     });
 
-    // --- LOGOUT ---
+    // LOGOUT
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await supabase.auth.signOut();
       appSection.classList.add('hidden');
@@ -187,44 +183,48 @@
       document.getElementById('password').value = "";
     });
 
-    // --- SHOW APP AFTER LOGIN ---
+    // SHOW APP
     async function showApp(user) {
       authSection.classList.add('hidden');
       appSection.classList.remove('hidden');
       welcome.textContent = `Welcome, ${user.email}!`;
-      loadPayments(user.id);
+      loadPayments(user.email);
       loadUserDirectory();
     }
 
-    // --- ADD PAYMENT ---
+    // ADD PAYMENT
     document.getElementById('addPaymentBtn').addEventListener('click', async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return showMessage("Please log in first.", "error");
 
-      const payment = {
-        company_id: document.getElementById('company_id').value.trim(),
-        date_paid: document.getElementById('date_paid').value,
-        invoice: document.getElementById('invoice').value.trim(),
-        amount: parseFloat(document.getElementById('amount').value),
-        deposited: document.getElementById('deposited').checked,
-        deposited_date: document.getElementById('deposited_date').value || null,
-        customer: document.getElementById('customer').value.trim(),
-        created_by: user.id
-      };
+      const invoice = document.getElementById('invoice').value.trim();
+      const customer = document.getElementById('customer').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const date_paid = document.getElementById('date_paid').value;
+      const deposited = document.getElementById('deposited').checked;
+      const deposited_date = document.getElementById('deposited_date').value || null;
 
-      if (!payment.invoice || !payment.amount || !payment.customer) {
-        showMessage("Invoice, Amount, and Customer are required.", "error");
+      if (!invoice || !customer || !amount || !date_paid) {
+        showMessage("Invoice, Amount, Customer, and Date Paid are required.", "error");
         return;
       }
 
-      const { error } = await supabase.from('payments').insert([payment]);
+      const { error } = await supabase.from('payments').insert([{
+        user_email: user.email,
+        invoice,
+        customer,
+        amount,
+        date_paid,
+        deposited,
+        deposited_date,
+        created_by: user.id
+      }]);
 
       if (error) showMessage("❌ Insert failed: " + error.message, "error");
       else {
         showMessage("✅ Payment added successfully!");
-        loadPayments(user.id);
+        loadPayments(user.email);
         loadUserDirectory();
-        // Clear fields
         document.querySelectorAll('#trackerView input').forEach(i => {
           if (i.type === 'checkbox') i.checked = false;
           else i.value = '';
@@ -232,12 +232,11 @@
       }
     });
 
-    // --- LOAD USER'S PAYMENTS ---
-    async function loadPayments(userId) {
-      const { data, error } = await supabase
-        .from('payments')
+    // LOAD PAYMENTS
+    async function loadPayments(user_email) {
+      const { data, error } = await supabase.from('payments')
         .select('*')
-        .eq('created_by', userId)
+        .eq('user_email', user_email)
         .order('date_paid', { ascending: false });
 
       paymentsTable.innerHTML = "";
@@ -259,7 +258,7 @@
       });
     }
 
-    // --- LOAD USER DIRECTORY ---
+    // LOAD USER DIRECTORY
     async function loadUserDirectory() {
       const { data: users, error: userError } = await supabase.auth.admin.listUsers();
       if (userError) {
@@ -272,7 +271,7 @@
         const { data: payments } = await supabase
           .from('payments')
           .select('amount')
-          .eq('created_by', user.id);
+          .eq('user_email', user.email);
 
         const total = payments?.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0) || 0;
 
@@ -284,7 +283,7 @@
       }
     }
 
-    // --- TAB SWITCHING ---
+    // TAB SWITCHING
     trackerTab.addEventListener('click', () => {
       trackerTab.classList.add('active');
       directoryTab.classList.remove('active');
@@ -299,7 +298,7 @@
       loadUserDirectory();
     });
 
-    // --- AUTO LOGIN CHECK ---
+    // AUTO LOGIN CHECK
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) showApp(user);
