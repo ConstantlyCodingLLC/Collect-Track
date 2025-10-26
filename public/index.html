@@ -44,6 +44,8 @@
 
     <!-- PAYMENT TRACKER -->
     <div id="trackerView">
+      <!-- NEW USER EMAIL INPUT -->
+      <input type="email" id="user_email" placeholder="User Email" />
       <input type="text" id="invoice" placeholder="Invoice #" />
       <input type="text" id="customer" placeholder="Customer Name" />
       <input type="number" id="amount" placeholder="Amount ($)" step="0.01" />
@@ -148,6 +150,7 @@
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return showMessage("Please log in first.", "error");
 
+      const user_email = document.getElementById('user_email').value.trim(); // <-- new field
       const invoice = document.getElementById('invoice').value.trim();
       const customer = document.getElementById('customer').value.trim();
       const amount = parseFloat(document.getElementById('amount').value);
@@ -155,13 +158,13 @@
       const deposited = document.getElementById('deposited').checked;
       const deposited_date = document.getElementById('deposited_date').value || null;
 
-      if (!invoice || !customer || !amount || !date_paid) {
-        showMessage("Invoice, Amount, Customer, and Date Paid are required.", "error");
+      if (!user_email || !invoice || !customer || !amount || !date_paid) {
+        showMessage("User Email, Invoice, Amount, Customer, and Date Paid are required.", "error");
         return;
       }
 
       const { error } = await supabase.from('payments').insert([{
-        user_email: user.email,
+        user_email,
         created_by: user.id,
         invoice,
         customer,
@@ -174,7 +177,7 @@
       if (error) showMessage("❌ Insert failed: " + error.message, "error");
       else {
         showMessage("✅ Payment added successfully!");
-        loadPayments(user.email);
+        loadPayments(user_email);
         loadUserDirectory();
         document.querySelectorAll('#trackerView input').forEach(i => { if(i.type==='checkbox') i.checked=false; else i.value=''; });
       }
