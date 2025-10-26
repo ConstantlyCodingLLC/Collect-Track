@@ -60,6 +60,14 @@
       background: #0066ff;
       color: #fff;
     }
+    #messageBox {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .success { background: #e6ffed; color: #056608; }
+    .error { background: #ffe6e6; color: #a30000; }
   </style>
 </head>
 <body>
@@ -92,6 +100,8 @@
       <input type="date" id="deposited_date" placeholder="Deposited Date" />
       <input type="text" id="company_id" placeholder="Company ID" />
       <button id="addPaymentBtn">Add Payment</button>
+
+      <div id="messageBox"></div>
 
       <table>
         <thead>
@@ -139,15 +149,21 @@
     const directoryView = document.getElementById('directoryView');
     const trackerTab = document.getElementById('trackerTab');
     const directoryTab = document.getElementById('directoryTab');
+    const messageBox = document.getElementById('messageBox');
+
+    function showMessage(msg, type="success") {
+      messageBox.textContent = msg;
+      messageBox.className = type === "error" ? "error" : "success";
+      setTimeout(() => (messageBox.textContent = ""), 4000);
+    }
 
     // --- LOGIN ---
     document.getElementById('loginBtn').addEventListener('click', async () => {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        authMessage.textContent = "❌ Login failed: " + error.message;
-      } else {
+      if (error) authMessage.textContent = "❌ Login failed: " + error.message;
+      else {
         authMessage.textContent = "✅ Login successful!";
         showApp(data.user);
       }
@@ -158,11 +174,8 @@
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        authMessage.textContent = "❌ Registration failed: " + error.message;
-      } else {
-        authMessage.textContent = "✅ Registered successfully! You can now login.";
-      }
+      if (error) authMessage.textContent = "❌ Registration failed: " + error.message;
+      else authMessage.textContent = "✅ Registered successfully! You can now login.";
     });
 
     // --- LOGOUT ---
@@ -186,7 +199,7 @@
     // --- ADD PAYMENT ---
     document.getElementById('addPaymentBtn').addEventListener('click', async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return alert("Please log in first.");
+      if (!user) return showMessage("Please log in first.", "error");
 
       const payment = {
         company_id: document.getElementById('company_id').value.trim(),
@@ -199,20 +212,30 @@
         created_by: user.id
       };
 
+      if (!payment.invoice || !payment.amount || !payment.customer) {
+        showMessage("Invoice, Amount, and Customer are required.", "error");
+        return;
+      }
+
       const { error } = await supabase.from('payments').insert([payment]);
 
-      if (error) {
-        alert("❌ Insert failed: " + error.message);
-      } else {
-        alert("✅ Payment added successfully!");
+      if (error) showMessage("❌ Insert failed: " + error.message, "error");
+      else {
+        showMessage("✅ Payment added successfully!");
         loadPayments(user.id);
         loadUserDirectory();
+        // Clear fields
+        document.querySelectorAll('#trackerView input').forEach(i => {
+          if (i.type === 'checkbox') i.checked = false;
+          else i.value = '';
+        });
       }
     });
 
     // --- LOAD USER'S PAYMENTS ---
     async function loadPayments(userId) {
-      const { data, error } = await supabase.from('payments')
+      const { data, error } = await supabase
+        .from('payments')
         .select('*')
         .eq('created_by', userId)
         .order('date_paid', { ascending: false });
