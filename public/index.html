@@ -209,16 +209,16 @@
         return;
       }
 
-      const { error } = await supabase.from('payments').insert([{
-        user_email: user.email,
-        invoice,
-        customer,
-        amount,
-        date_paid,
-        deposited,
-        deposited_date,
-        created_by: user.id
-      }]);
+const { error } = await supabase.from('payments').insert([{
+  user_email: user.email,   // <-- email goes here
+  invoice,
+  customer,
+  amount,
+  date_paid,
+  deposited,
+  deposited_date,
+  created_by: user.id        // <-- UUID goes here
+}]);
 
       if (error) showMessage("❌ Insert failed: " + error.message, "error");
       else {
