@@ -51,6 +51,18 @@ th { background: #6a0dad; color: white; }
   <button id="directoryTab" class="tab-btn">User Directory</button>
 </div>
 
+  <h3>Budget</h3>
+<p id="budgetDisplay">$0.00</p>
+
+<!-- For BusinessOwner/Admin -->
+<div id="budgetSetSection" class="hidden">
+  <label>Set Budget for Employee</label>
+  <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
+  <input type="number" id="budgetAmount" placeholder="Budget Amount" />
+  <button id="setBudgetBtn">Set Budget</button>
+</div>
+
+
 <!-- PAYMENT TRACKER -->
 <div id="trackerView">
   <label>Invoice / PO Number</label>
@@ -240,6 +252,41 @@ async function loadPayments(email, role){
   document.getElementById('budgetDisplay').textContent=`$${budgetTotal.toFixed(2)}`;
 }
 
+// Load Budget
+async function loadBudget(userEmail, role){
+    if(role==='Employee'){
+        // Employee sees only their own payments sum
+        const { data } = await supabase.from('payments').select('amount').eq('user_email', userEmail);
+        const total = data.reduce((sum,p)=>sum + parseFloat(p.amount), 0);
+        document.getElementById('budgetDisplay').textContent = `$${total.toFixed(2)}`;
+    } else {
+        // BusinessOwner/Admin can see all users budgets
+        const { data } = await supabase.from('profiles').select('email, budget');
+        document.getElementById('budgetDisplay').textContent = "Employee Budgets:";
+        let html = "<ul>";
+        data.forEach(u => html += `<li>${u.email}: $${(u.budget||0).toFixed(2)}</li>`);
+        html += "</ul>";
+        document.getElementById('budgetDisplay').innerHTML = html;
+
+        // Show set budget section
+        document.getElementById('budgetSetSection').classList.remove('hidden');
+    }
+}
+
+// Set Budget (BusinessOwner/Admin)
+document.getElementById('setBudgetBtn').addEventListener('click', async ()=>{
+    const email = document.getElementById('budgetUserEmail').value.trim();
+    const amount = parseFloat(document.getElementById('budgetAmount').value);
+    if(!email || isNaN(amount)) return showMessage("Enter valid email and amount","error");
+    const { error } = await supabase.from('profiles').update({budget: amount}).eq('email', email);
+    if(error) showMessage("❌ "+error.message,"error");
+    else{
+        showMessage(`✅ Budget for ${email} set to $${amount}`);
+        loadBudget(email, (await supabase.from('profiles').select('role').eq('email', email).single()).data.role);
+    }
+});
+
+  
 // LOAD USER DIRECTORY
 async function loadUserDirectory(role){
   const { data, error } = await supabase.from('profiles').select('email,role');
