@@ -159,95 +159,171 @@ th { background: #6a0dad; color: white; }
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const authSection = document.getElementById('auth-section');
-const appSection = document.getElementById('app-section');
-const paymentsTable = document.getElementById('paymentsTable');
-const budgetSummary = document.getElementById('budgetSummary');
-const totalPayments = document.getElementById('totalPayments');
-const totalDeposited = document.getElementById('totalDeposited');
-const totalPending = document.getElementById('totalPending');
-const remainingBudget = document.getElementById('remainingBudget');
 
-const BUDGET_LIMIT = 10000; // Example total budget
-
-function showMessage(msg, type="success") {
-  const box = document.getElementById('messageBox');
-  box.textContent = msg;
-  box.className = type === "error" ? "error" : "success";
-  setTimeout(() => (box.textContent = ""), 4000);
+function showMessage(text, type) {
+  const msg = document.getElementById('message');
+  msg.innerText = text;
+  msg.style.color = type === 'error' ? 'red' : '#66fcf1';
 }
 
-async function loadPayments(user_email) {
+async function loadPayments(email) {
   const { data, error } = await supabase
     .from('payments')
     .select('*')
-    .eq('user_email', user_email)
-    .order('date_paid', { ascending: false });
+    .eq('user_email', email)
+    .order('id', { ascending: false });
 
-  paymentsTable.innerHTML = "";
-  if (error || !data?.length) {
-    paymentsTable.innerHTML = "<tr><td colspan='7'>No payments found</td></tr>";
-    budgetSummary.classList.add('hidden');
+  if (error) {
+    showMessage("Error loading payments: " + error.message, "error");
     return;
   }
 
-  let total = 0, deposited = 0, pending = 0;
+  const table = document.getElementById('paymentsTable');
+  table.innerHTML = '';
+  let total = 0;
 
   data.forEach(p => {
-    paymentsTable.innerHTML += `
-      <tr>
-        <td>${p.invoice}</td>
-        <td>${p.customer}</td>
-        <td>$${p.amount.toFixed(2)}</td>
-        <td>${p.date_paid}</td>
-        <td>${p.payment_type}</td>
-        <td>${p.deposited ? "✅" : "❌"}</td>
-        <td>${p.deposited_date || "-"}</td>
-      </tr>`;
-    total += p.amount;
-    if (p.deposited) deposited += p.amount; else pending += p.amount;
+    const row = `<tr>
+      <td>${p.id}</td>
+      <td>${p.payment_type || ''}</td>
+      <td>$${p.amount || 0}</td>
+      <td>${p.date || ''}</td>
+      <td>${p.created_by || ''}</td>
+    </tr>`;
+    table.innerHTML += row;
+    total += parseFloat(p.amount || 0);
   });
 
-  totalPayments.textContent = `$${total.toFixed(2)}`;
-  totalDeposited.textContent = `$${deposited.toFixed(2)}`;
-  totalPending.textContent = `$${pending.toFixed(2)}`;
-  remainingBudget.textContent = `$${(BUDGET_LIMIT - total).toFixed(2)}`;
-  budgetSummary.classList.remove('hidden');
+  document.getElementById('totalPayments').innerText = `$${total.toFixed(2)}`;
+  document.getElementById('transactionCount').innerText = data.length;
+  document.getElementById('lastUpdated').innerText = new Date().toLocaleString();
 }
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return showMessage(error.message, "error");
+  showMessage("Login successful!");
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('app-section').style.display = 'block';
+  loadPayments(email);
+});
+
+document.getElementById('registerBtn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) return showMessage(error.message, "error");
+  showMessage("Account created successfully! Please log in.");
+});
 
 document.getElementById('addPaymentBtn').addEventListener('click', async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  const invoice = document.getElementById('invoice').value.trim();
-  const customer = document.getElementById('customer').value.trim();
-  const amount = parseFloat(document.getElementById('amount').value);
-  const date_paid = document.getElementById('date_paid').value;
-  const payment_type = document.getElementById('payment_type').value;
-  const deposited = document.getElementById('deposited').checked;
-  const deposited_date = document.getElementById('deposited_date').value || null;
+  if (!user) return showMessage("Please log in first.", "error");
 
-  if (!invoice || !customer || !amount || !date_paid || !payment_type) {
-    showMessage("All fields except deposited date are required.", "error");
-    return;
-  }
+  const amount = document.getElementById('amount').value;
+  const payment_type = document.getElementById('paymentType').value;
+  const date = document.getElementById('date').value;
 
-  const { error } = await supabase.from('payments').insert([{
-    user_email: user.email,
-    created_by: user.id,
-    invoice, customer, amount, date_paid, payment_type, deposited, deposited_date
-  }]);
+  const { error } = await supabase
+    .from('payments')
+    .insert([{ user_email: user.email, created_by: user.id, amount, payment_type, date }]);
 
-  if (error) showMessage("❌ Insert failed: " + error.message, "error");
-  else { showMessage("✅ Payment added!"); loadPayments(user.email); }
+  if (error) return showMessage(error.message, "error");
+  showMessage("✅ Payment added successfully!");
+  loadPayments(user.email);
 });
 
-(async () => {
+// === EXPORT & UPLOAD SECTION ===
+document.getElementById('exportCSVBtn').addEventListener('click', async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    loadPayments(user.email);
-  }
-})();
+  if (!user) return showMessage("Please log in first.", "error");
+
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('user_email', user.email);
+
+  if (error || !data.length) return showMessage("No data to export.", "error");
+
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(','))
+  ].join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, 'payments.csv');
+  showMessage("✅ CSV exported successfully!");
+});
+
+document.getElementById('exportExcelBtn').addEventListener('click', async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return showMessage("Please log in first.", "error");
+
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('user_email', user.email);
+
+  if (error || !data.length) return showMessage("No data to export.", "error");
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Payments');
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+  saveAs(blob, 'payments.xlsx');
+  showMessage("✅ Excel exported successfully!");
+});
+
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+  const fileInput = document.getElementById('uploadFile');
+  const file = fileInput.files[0];
+  if (!file) return showMessage("Please select a file first.", "error");
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return showMessage("Please log in first.", "error");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    if (file.name.endsWith('.csv')) {
+      const text = e.target.result;
+      const rows = text.split('\n').map(r => r.split(','));
+      const headers = rows.shift().map(h => h.trim().replace(/"/g, ''));
+      const records = rows.filter(r => r.length >= 3).map(r => {
+        const rowObj = {};
+        headers.forEach((h, i) => rowObj[h] = r[i]?.replace(/"/g, '').trim());
+        rowObj.user_email = user.email;
+        rowObj.created_by = user.id;
+        return rowObj;
+      });
+      if (records.length) await supabase.from('payments').insert(records);
+      showMessage("✅ CSV uploaded successfully!");
+      loadPayments(user.email);
+    } else if (file.name.endsWith('.xlsx')) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      const records = sheetData.map(r => ({
+        ...r,
+        user_email: user.email,
+        created_by: user.id
+      }));
+      if (records.length) await supabase.from('payments').insert(records);
+      showMessage("✅ Excel uploaded successfully!");
+      loadPayments(user.email);
+    } else {
+      showMessage("Unsupported file type. Upload CSV or Excel only.", "error");
+    }
+  };
+
+  if (file.name.endsWith('.xlsx')) reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
+});
+
 </script>
 </body>
 </html>
