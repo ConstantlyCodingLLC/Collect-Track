@@ -51,8 +51,6 @@ th { background: #6a0dad; color: white; }
   <button id="directoryTab" class="tab-btn">User Directory</button>
 </div>
 
-  <h3>Budget</h3>
-<p id="budgetDisplay">$0.00</p>
 
 <!-- For BusinessOwner/Admin -->
 <div id="budgetSetSection" class="hidden">
@@ -103,8 +101,15 @@ th { background: #6a0dad; color: white; }
   <label>Search Payments:</label>
   <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
 
-  <h3>My Budget</h3>
-  <p id="budgetDisplay">$0.00</p>
+<h3>Budget</h3>
+<p id="budgetDisplay">$0.00</p>
+
+<!-- For BusinessOwner/Admin -->
+<div id="budgetSetSection" class="hidden">
+  <label>Set Budget for Employee</label>
+  <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
+  <input type="number" id="budgetAmount" placeholder="Budget Amount" />
+  <button id="setBudgetBtn">Set Budget</button>
 </div>
 
 <!-- USER DIRECTORY -->
