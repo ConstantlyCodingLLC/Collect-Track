@@ -1,226 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FiloFax Corporate Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <style>
-    body {
-      font-family: "Poppins", sans-serif;
-      background-color: #f4f6f8;
-      color: #222;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background-color: #1a2a40;
-      color: white;
-      padding: 1rem 2rem;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-
-    .container {
-      width: 90%;
-      margin: 2rem auto;
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    h2 {
-      border-bottom: 2px solid #1a2a40;
-      padding-bottom: 0.5rem;
-    }
-
-    button {
-      background-color: #1a2a40;
-      color: white;
-      border: none;
-      padding: 0.6rem 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-right: 5px;
-      transition: 0.2s ease-in-out;
-    }
-
-    button:hover {
-      background-color: #243b55;
-    }
-
-    input, select {
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      margin: 0.3rem 0;
-      width: 100%;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-
-    th {
-      background-color: #1a2a40;
-      color: white;
-    }
-
-    .dashboard {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .card {
-      flex: 1;
-      background: #eef2f7;
-      border-radius: 10px;
-      padding: 1rem;
-      text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FiloFax - Corporate Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 10px; }
+.container { max-width: 800px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+input, button, select { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+button { background-color: #6a0dad; color: white; font-weight: bold; cursor: pointer; border: none; }
+button:hover { background-color: #4b0082; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
+th, td { border: 1px solid #ccc; text-align: left; padding: 8px; word-break: break-word; }
+th { background: #6a0dad; color: white; }
+.hidden { display: none; }
+.tab-btn { width: 48%; background: #f4f4f4; color: #333; border: 1px solid #ccc; font-size: 0.9em; }
+.tab-btn.active { background: #6a0dad; color: #fff; }
+#messageBox { margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; font-size: 0.9em; }
+.success { background: #e6ffed; color: #056608; }
+.error { background: #ffe6e6; color: #a30000; }
+.logo { text-align:center; margin-bottom: 20px; }
+.logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+</style>
 </head>
 <body>
-  <header>💼 FiloFax Corporate Dashboard</header>
 
-  <div class="container">
-    <h2>Dashboard Overview</h2>
-    <div class="dashboard">
-      <div class="card">
-        <h3>Total Payments</h3>
-        <p id="totalPayments">$0</p>
-      </div>
-      <div class="card">
-        <h3>Total Records</h3>
-        <p id="totalRecords">0</p>
-      </div>
-      <div class="card">
-        <h3>Last Updated</h3>
-        <p id="lastUpdated">N/A</p>
-      </div>
-    </div>
+<div class="logo"><h1>💰FiloFax</h1></div>
 
-    <h2>Upload or Export Data</h2>
-    <input type="file" id="fileUpload" accept=".csv, .xlsx" />
-    <button onclick="uploadFile()">Upload File</button>
-    <button onclick="exportExcel()">Export Excel</button>
-    <button onclick="exportCSV()">Export CSV</button>
+<!-- AUTH -->
+<div class="container" id="auth-section">
+<h2>Login / Register</h2>
+<input type="email" id="email" placeholder="Email" />
+<input type="password" id="password" placeholder="Password" />
+<button id="loginBtn">Login</button>
+<button id="registerBtn">Register</button>
+<p id="authMessage"></p>
+</div>
 
-    <h2>Payments Table</h2>
-    <input type="text" id="search" placeholder="Search payments..." oninput="filterPayments()" />
+<!-- APP -->
+<div class="container hidden" id="app-section">
+<h2>Financial Tracker</h2>
+<p id="welcome"></p>
+<p id="roleDisplay"></p>
 
-    <table id="paymentsTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Amount</th>
-          <th>Payment Type</th>
-          <th>Date</th>
-          <th>Created By</th>
-        </tr>
-      </thead>
-      <tbody id="paymentsBody"></tbody>
-    </table>
-  </div>
+<div style="display:flex; justify-content:space-between;">
+  <button id="trackerTab" class="tab-btn active">My Payments</button>
+  <button id="directoryTab" class="tab-btn">User Directory</button>
+</div>
 
-  <script>
+<!-- PAYMENT TRACKER -->
+<div id="trackerView">
+  <label>Invoice / PO Number</label>
+  <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number" />
+
+  <label>Customer Name / Email</label>
+  <input type="text" id="customer" placeholder="Enter Customer Name or Email" />
+
+  <label>Amount ($)</label>
+  <input type="number" id="amount" placeholder="Enter Amount" step="0.01" />
+
+  <label>Date Paid</label>
+  <input type="date" id="date_paid" />
+
+  <label>Payment Type</label>
+  <select id="payment_type">
+    <option value="">Select Payment Type</option>
+    <option value="Stripe">Stripe</option>
+    <option value="PayPal">PayPal</option>
+    <option value="Cash">Cash</option>
+    <option value="Bank Transfer">Bank Transfer</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label><input type="checkbox" id="deposited" /> Deposited?</label>
+  <label>Deposited Date</label>
+  <input type="date" id="deposited_date" />
+
+  <button id="addPaymentBtn">Add Payment</button>
+  <div id="messageBox"></div>
+
+  <!-- Export & Upload -->
+  <button id="exportCSVBtn" style="background-color:#ff6600;">Export Payments CSV</button>
+  <button id="exportExcelBtn" style="background-color:#ff6600;">Export Payments Excel</button>
+  <input type="file" id="uploadFile" accept=".xlsx,.csv" />
+  <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
+
+  <label>Search Payments:</label>
+  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
+
+  <h3>My Budget</h3>
+  <p id="budgetDisplay">$0.00</p>
+</div>
+
+<!-- USER DIRECTORY -->
+<div id="directoryView" class="hidden">
+<h3>All Users</h3>
+<table>
+  <thead>
+    <tr><th>User Email</th><th>Role</th><th>Total Payments ($)</th></tr>
+  </thead>
+  <tbody id="userDirectoryTable"></tbody>
+</table>
+
+<h3>Assign Roles (BusinessOwner & Admin only)</h3>
+<label>User Email</label>
+<input type="text" id="roleUserEmail" placeholder="User Email" />
+<label>Role</label>
+<select id="roleSelect">
+  <option value="">Select Role</option>
+  <option value="Employee">Employee</option>
+  <option value="BusinessOwner">BusinessOwner</option>
+  <option value="Admin">Admin</option>
+</select>
+<button id="assignRoleBtn">Assign Role</button>
+</div>
+
+<button id="logoutBtn">Logout</button>
+</div>
+
+<script>
     // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
-    async function loadPayments() {
-      const { data, error } = await supabase.from("payments").select("*");
-      if (error) return console.error(error);
+const authSection = document.getElementById('auth-section');
+const appSection = document.getElementById('app-section');
+const paymentsTable = document.getElementById('paymentsTable');
+const userDirectoryTable = document.getElementById('userDirectoryTable');
+const welcome = document.getElementById('welcome');
+const roleDisplay = document.getElementById('roleDisplay');
+const messageBox = document.getElementById('messageBox');
 
-      const tbody = document.getElementById("paymentsBody");
-      tbody.innerHTML = "";
-      let total = 0;
+// Helper
+function showMessage(msg, type="success") {
+  messageBox.textContent = msg;
+  messageBox.className = type==="error"?"error":"success";
+  setTimeout(()=>messageBox.textContent="",4000);
+}
 
-      data.forEach(row => {
-        total += parseFloat(row.amount || 0);
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${row.id}</td>
-          <td>$${row.amount}</td>
-          <td>${row.payment_type || ""}</td>
-          <td>${new Date(row.created_at).toLocaleDateString()}</td>
-          <td>${row.created_by}</td>`;
-        tbody.appendChild(tr);
-      });
+// AUTH
+document.getElementById('loginBtn').addEventListener('click', async()=>{
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
+  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+  showApp(data.user);
+});
+document.getElementById('registerBtn').addEventListener('click', async()=>{
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  const {data,error}=await supabase.auth.signUp({email,password});
+  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+  document.getElementById('authMessage').textContent="✅ Registered successfully!";
+});
 
-      document.getElementById("totalPayments").innerText = "$" + total.toFixed(2);
-      document.getElementById("totalRecords").innerText = data.length;
-      document.getElementById("lastUpdated").innerText = new Date().toLocaleString();
+// SHOW APP
+async function showApp(user){
+  authSection.classList.add('hidden');
+  appSection.classList.remove('hidden');
+  welcome.textContent=`Welcome, ${user.email}`;
+  
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id',user.id).single();
+  const role = profile?.role || 'Employee';
+  roleDisplay.textContent=`Role: ${role}`;
+
+  loadPayments(user.email, role);
+  loadUserDirectory(role);
+
+  // Permissions
+  if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
+  if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
+}
+
+// LOGOUT
+document.getElementById('logoutBtn').addEventListener('click', async()=>{
+  await supabase.auth.signOut();
+  appSection.classList.add('hidden');
+  authSection.classList.remove('hidden');
+});
+
+// ADD PAYMENT
+document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
+  const { data:{ user } } = await supabase.auth.getUser();
+  const invoice=document.getElementById('invoice').value.trim();
+  const customer=document.getElementById('customer').value.trim();
+  const amount=parseFloat(document.getElementById('amount').value);
+  const date_paid=document.getElementById('date_paid').value;
+  const payment_type=document.getElementById('payment_type').value;
+  const deposited=document.getElementById('deposited').checked;
+  const deposited_date=document.getElementById('deposited_date').value || null;
+
+  if(!invoice||!customer||!amount||!date_paid||!payment_type){
+    return showMessage("All fields except deposited date are required.","error");
+  }
+
+  const { error } = await supabase.from('payments').insert([{user_email:user.email,created_by:user.id,invoice,customer,amount,date_paid,payment_type,deposited,deposited_date}]);
+  if(error) showMessage("❌ "+error.message,"error");
+  else{
+    showMessage("✅ Payment added successfully!");
+    loadPayments(user.email,(await supabase.from('profiles').select('role').eq('id',user.id).single()).data.role);
+    document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
+  }
+});
+
+// ASSIGN ROLE
+document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
+  const userEmail=document.getElementById('roleUserEmail').value.trim();
+  const newRole=document.getElementById('roleSelect').value;
+  if(!userEmail||!newRole) return showMessage("Fill email and role","error");
+  const { error } = await supabase.from('profiles').update({role:newRole}).eq('email',userEmail);
+  if(error) showMessage("❌ "+error.message,"error");
+  else showMessage(`✅ ${userEmail} set as ${newRole}`);
+});
+
+// LOAD PAYMENTS
+async function loadPayments(email, role){
+  const { data, error } = await supabase.from('payments').select('*').order('date_paid',{ascending:false});
+  paymentsTable.innerHTML='';
+  if(error||!data.length){ paymentsTable.innerHTML="<tr><td colspan='7'>No payments yet</td></tr>"; return; }
+  const filtered = role==='Admin'||role==='BusinessOwner'? data : data.filter(p=>p.user_email===email);
+  let budgetTotal=0;
+  filtered.forEach(p=>{
+    paymentsTable.innerHTML+=`<tr>
+      <td>${p.invoice}</td>
+      <td>${p.customer}</td>
+      <td>$${p.amount.toFixed(2)}</td>
+      <td>${p.date_paid}</td>
+      <td>${p.payment_type||'-'}</td>
+      <td>${p.deposited?'✅':'❌'}</td>
+      <td>${p.deposited_date||'-'}</td>
+    </tr>`;
+    budgetTotal+=p.amount;
+  });
+  document.getElementById('budgetDisplay').textContent=`$${budgetTotal.toFixed(2)}`;
+}
+
+// LOAD USER DIRECTORY
+async function loadUserDirectory(role){
+  const { data, error } = await supabase.from('profiles').select('email,role');
+  if(error||!data.length) return;
+  userDirectoryTable.innerHTML='';
+  for(const u of data){
+    let total=0;
+    if(role==='Admin'||role==='BusinessOwner'){
+      const payments = await supabase.from('payments').select('amount').eq('user_email',u.email);
+      total=payments.data.reduce((a,b)=>a+b.amount,0);
     }
-
-    function filterPayments() {
-      const filter = document.getElementById("search").value.toLowerCase();
-      const rows = document.querySelectorAll("#paymentsBody tr");
-      rows.forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(filter) ? "" : "none";
-      });
-    }
-
-    async function exportExcel() {
-      const { data } = await supabase.from("payments").select("*");
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Payments");
-      XLSX.writeFile(wb, "payments.xlsx");
-    }
-
-    async function exportCSV() {
-      const { data } = await supabase.from("payments").select("*");
-      const csv = XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(data));
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "payments.csv";
-      a.click();
-    }
-
-    async function uploadFile() {
-      const file = document.getElementById("fileUpload").files[0];
-      if (!file) return alert("Please choose a file first.");
-      const reader = new FileReader();
-
-      reader.onload = async function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-        for (const row of jsonData) {
-          await supabase.from("payments").insert({
-            amount: row.amount,
-            payment_type: row.payment_type,
-            created_by: row.created_by
-          });
-        }
-        alert("Data uploaded successfully!");
-        loadPayments();
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    loadPayments();
-  </script>
+    userDirectoryTable.innerHTML+=`<tr><td>${u.email}</td><td>${u.role}</td><td>$${total.toFixed(2)}</td></tr>`;
+  }
+}
+</script>
 </body>
 </html>
