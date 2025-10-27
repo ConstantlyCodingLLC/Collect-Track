@@ -3,12 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FiloFax - Corporate Financial Tracker</title>
+<title>FiloFax - Corporate Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#6a0dad">
 <style>
 body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 10px; }
 .container { max-width: 800px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
@@ -26,24 +24,13 @@ th { background: #6a0dad; color: white; }
 .error { background: #ffe6e6; color: #a30000; }
 .logo { text-align:center; margin-bottom: 20px; }
 .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
-.budget-card { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-around; margin-top:10px; }
-.budget-box { background:#f4f4f4; border-radius:8px; padding:10px; text-align:center; flex:1; min-width:150px; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
-.budget-box h4 { margin:0; color:#6a0dad; }
-.budget-box p { margin:5px 0 0; font-weight:bold; }
-@media screen and (max-width: 480px) {
-  input, button, select { font-size: 0.9em; padding: 8px; }
-  th, td { font-size: 0.8em; }
-  .tab-btn { font-size: 0.8em; }
-}
 </style>
 </head>
 <body>
 
-<div class="logo">
-<h1>💰FiloFax</h1>
-</div>
+<div class="logo"><h1>💰FiloFax</h1></div>
 
-<!-- AUTH SECTION -->
+<!-- AUTH -->
 <div class="container" id="auth-section">
 <h2>Login / Register</h2>
 <input type="email" id="email" placeholder="Email" />
@@ -53,34 +40,15 @@ th { background: #6a0dad; color: white; }
 <p id="authMessage"></p>
 </div>
 
-<!-- APP SECTION -->
+<!-- APP -->
 <div class="container hidden" id="app-section">
 <h2>Financial Tracker</h2>
 <p id="welcome"></p>
+<p id="roleDisplay"></p>
 
 <div style="display:flex; justify-content:space-between;">
   <button id="trackerTab" class="tab-btn active">My Payments</button>
   <button id="directoryTab" class="tab-btn">User Directory</button>
-</div>
-
-<!-- BUDGET SUMMARY -->
-<div id="budgetSummary" class="budget-card hidden">
-  <div class="budget-box">
-    <h4>Total Payments</h4>
-    <p id="totalPayments">$0.00</p>
-  </div>
-  <div class="budget-box">
-    <h4>Deposited</h4>
-    <p id="totalDeposited">$0.00</p>
-  </div>
-  <div class="budget-box">
-    <h4>Pending</h4>
-    <p id="totalPending">$0.00</p>
-  </div>
-  <div class="budget-box">
-    <h4>Remaining Budget</h4>
-    <p id="remainingBudget">$0.00</p>
-  </div>
 </div>
 
 <!-- PAYMENT TRACKER -->
@@ -123,20 +91,8 @@ th { background: #6a0dad; color: white; }
   <label>Search Payments:</label>
   <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
 
-  <table>
-    <thead>
-      <tr>
-        <th>Invoice</th>
-        <th>Customer</th>
-        <th>Amount</th>
-        <th>Date Paid</th>
-        <th>Payment Type</th>
-        <th>Deposited</th>
-        <th>Deposited Date</th>
-      </tr>
-    </thead>
-    <tbody id="paymentsTable"></tbody>
-  </table>
+  <h3>My Budget</h3>
+  <p id="budgetDisplay">$0.00</p>
 </div>
 
 <!-- USER DIRECTORY -->
@@ -144,110 +100,159 @@ th { background: #6a0dad; color: white; }
 <h3>All Users</h3>
 <table>
   <thead>
-    <tr><th>User Email</th><th>Total Payments ($)</th></tr>
+    <tr><th>User Email</th><th>Role</th><th>Total Payments ($)</th></tr>
   </thead>
   <tbody id="userDirectoryTable"></tbody>
 </table>
+
+<h3>Assign Roles (BusinessOwner & Admin only)</h3>
+<label>User Email</label>
+<input type="text" id="roleUserEmail" placeholder="User Email" />
+<label>Role</label>
+<select id="roleSelect">
+  <option value="">Select Role</option>
+  <option value="Employee">Employee</option>
+  <option value="BusinessOwner">BusinessOwner</option>
+  <option value="Admin">Admin</option>
+</select>
+<button id="assignRoleBtn">Assign Role</button>
 </div>
 
 <button id="logoutBtn">Logout</button>
 </div>
 
 <script>
-    // --- SUPABASE CONFIG ---
-    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
 const paymentsTable = document.getElementById('paymentsTable');
-const budgetSummary = document.getElementById('budgetSummary');
-const totalPayments = document.getElementById('totalPayments');
-const totalDeposited = document.getElementById('totalDeposited');
-const totalPending = document.getElementById('totalPending');
-const remainingBudget = document.getElementById('remainingBudget');
-
-const BUDGET_LIMIT = 10000; // Example total budget
+const userDirectoryTable = document.getElementById('userDirectoryTable');
+const welcome = document.getElementById('welcome');
+const roleDisplay = document.getElementById('roleDisplay');
+const messageBox = document.getElementById('messageBox');
 
 function showMessage(msg, type="success") {
-  const box = document.getElementById('messageBox');
-  box.textContent = msg;
-  box.className = type === "error" ? "error" : "success";
-  setTimeout(() => (box.textContent = ""), 4000);
+  messageBox.textContent = msg;
+  messageBox.className = type==="error"?"error":"success";
+  setTimeout(()=>messageBox.textContent="",4000);
 }
 
-async function loadPayments(user_email) {
-  const { data, error } = await supabase
-    .from('payments')
-    .select('*')
-    .eq('user_email', user_email)
-    .order('date_paid', { ascending: false });
-
-  paymentsTable.innerHTML = "";
-  if (error || !data?.length) {
-    paymentsTable.innerHTML = "<tr><td colspan='7'>No payments found</td></tr>";
-    budgetSummary.classList.add('hidden');
-    return;
-  }
-
-  let total = 0, deposited = 0, pending = 0;
-
-  data.forEach(p => {
-    paymentsTable.innerHTML += `
-      <tr>
-        <td>${p.invoice}</td>
-        <td>${p.customer}</td>
-        <td>$${p.amount.toFixed(2)}</td>
-        <td>${p.date_paid}</td>
-        <td>${p.payment_type}</td>
-        <td>${p.deposited ? "✅" : "❌"}</td>
-        <td>${p.deposited_date || "-"}</td>
-      </tr>`;
-    total += p.amount;
-    if (p.deposited) deposited += p.amount; else pending += p.amount;
-  });
-
-  totalPayments.textContent = `$${total.toFixed(2)}`;
-  totalDeposited.textContent = `$${deposited.toFixed(2)}`;
-  totalPending.textContent = `$${pending.toFixed(2)}`;
-  remainingBudget.textContent = `$${(BUDGET_LIMIT - total).toFixed(2)}`;
-  budgetSummary.classList.remove('hidden');
-}
-
-document.getElementById('addPaymentBtn').addEventListener('click', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  const invoice = document.getElementById('invoice').value.trim();
-  const customer = document.getElementById('customer').value.trim();
-  const amount = parseFloat(document.getElementById('amount').value);
-  const date_paid = document.getElementById('date_paid').value;
-  const payment_type = document.getElementById('payment_type').value;
-  const deposited = document.getElementById('deposited').checked;
-  const deposited_date = document.getElementById('deposited_date').value || null;
-
-  if (!invoice || !customer || !amount || !date_paid || !payment_type) {
-    showMessage("All fields except deposited date are required.", "error");
-    return;
-  }
-
-  const { error } = await supabase.from('payments').insert([{
-    user_email: user.email,
-    created_by: user.id,
-    invoice, customer, amount, date_paid, payment_type, deposited, deposited_date
-  }]);
-
-  if (error) showMessage("❌ Insert failed: " + error.message, "error");
-  else { showMessage("✅ Payment added!"); loadPayments(user.email); }
+// AUTH
+document.getElementById('loginBtn').addEventListener('click', async()=>{
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  const {data,error}=await supabase.auth.signInWithPassword({email,password});
+  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+  showApp(data.user);
+});
+document.getElementById('registerBtn').addEventListener('click', async()=>{
+  const email=document.getElementById('email').value;
+  const password=document.getElementById('password').value;
+  const {data,error}=await supabase.auth.signUp({email,password});
+  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+  document.getElementById('authMessage').textContent="✅ Registered successfully!";
 });
 
-(async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    loadPayments(user.email);
+// SHOW APP
+async function showApp(user){
+  authSection.classList.add('hidden');
+  appSection.classList.remove('hidden');
+  welcome.textContent=`Welcome, ${user.email}`;
+  
+  // Fetch role
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id',user.id).single();
+  const role = profile?.role || 'Employee';
+  roleDisplay.textContent=`Role: ${role}`;
+
+  loadPayments(user.email, role);
+  loadUserDirectory(role);
+
+  // Permissions
+  if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
+  if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
+}
+
+// LOGOUT
+document.getElementById('logoutBtn').addEventListener('click', async()=>{
+  await supabase.auth.signOut();
+  appSection.classList.add('hidden');
+  authSection.classList.remove('hidden');
+});
+
+// ADD PAYMENT
+document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
+  const { data:{ user } } = await supabase.auth.getUser();
+  const invoice=document.getElementById('invoice').value.trim();
+  const customer=document.getElementById('customer').value.trim();
+  const amount=parseFloat(document.getElementById('amount').value);
+  const date_paid=document.getElementById('date_paid').value;
+  const payment_type=document.getElementById('payment_type').value;
+  const deposited=document.getElementById('deposited').checked;
+  const deposited_date=document.getElementById('deposited_date').value || null;
+
+  if(!invoice||!customer||!amount||!date_paid||!payment_type){
+    return showMessage("All fields except deposited date are required.","error");
   }
-})();
+
+  const { error } = await supabase.from('payments').insert([{user_email:user.email,created_by:user.id,invoice,customer,amount,date_paid,payment_type,deposited,deposited_date}]);
+  if(error) showMessage("❌ "+error.message,"error");
+  else{
+    showMessage("✅ Payment added successfully!");
+    loadPayments(user.email,(await supabase.from('profiles').select('role').eq('id',user.id).single()).data.role);
+    document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
+  }
+});
+
+// ASSIGN ROLE (BusinessOwner/Admin only)
+document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
+  const userEmail=document.getElementById('roleUserEmail').value.trim();
+  const newRole=document.getElementById('roleSelect').value;
+  if(!userEmail||!newRole) return showMessage("Fill email and role","error");
+  const { error } = await supabase.from('profiles').update({role:newRole}).eq('email',userEmail);
+  if(error) showMessage("❌ "+error.message,"error");
+  else showMessage(`✅ ${userEmail} set as ${newRole}`);
+});
+
+// LOAD PAYMENTS (only user sees their payments)
+async function loadPayments(email, role){
+  const { data, error } = await supabase.from('payments').select('*').order('date_paid',{ascending:false});
+  paymentsTable.innerHTML='';
+  if(error||!data.length){ paymentsTable.innerHTML="<tr><td colspan='7'>No payments yet</td></tr>"; return; }
+  const filtered = role==='Admin'||role==='BusinessOwner'? data : data.filter(p=>p.user_email===email);
+  let budgetTotal=0;
+  filtered.forEach(p=>{
+    paymentsTable.innerHTML+=`<tr>
+      <td>${p.invoice}</td>
+      <td>${p.customer}</td>
+      <td>$${p.amount.toFixed(2)}</td>
+      <td>${p.date_paid}</td>
+      <td>${p.payment_type||'-'}</td>
+      <td>${p.deposited?'✅':'❌'}</td>
+      <td>${p.deposited_date||'-'}</td>
+    </tr>`;
+    budgetTotal+=p.amount;
+  });
+  document.getElementById('budgetDisplay').textContent=`$${budgetTotal.toFixed(2)}`;
+}
+
+// LOAD USER DIRECTORY
+async function loadUserDirectory(role){
+  const { data, error } = await supabase.from('profiles').select('email,role');
+  if(error||!data.length) return;
+  userDirectoryTable.innerHTML='';
+  for(const u of data){
+    let total=0;
+    if(role==='Admin'||role==='BusinessOwner'){
+      const payments = await supabase.from('payments').select('amount').eq('user_email',u.email);
+      total=payments.data.reduce((a,b)=>a+b.amount,0);
+    }
+    userDirectoryTable.innerHTML+=`<tr><td>${u.email}</td><td>${u.role}</td><td>$${total.toFixed(2)}</td></tr>`;
+  }
+}
+
 </script>
 </body>
 </html>
