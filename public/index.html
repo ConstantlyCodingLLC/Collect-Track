@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FiloFax - Financial Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6a0dad">
   <style>
@@ -32,16 +34,6 @@
   </style>
 </head>
 <body>
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.log('Service Worker registration failed:', err));
-    });
-  }
-</script>
 
 <div class="logo">
   <h1>💰FiloFax</h1>
@@ -84,6 +76,12 @@
     <input type="date" id="deposited_date" placeholder="Deposited Date" />
     <button id="addPaymentBtn">Add Payment</button>
     <div id="messageBox"></div>
+
+    <!-- Export & Upload -->
+    <button id="exportExcelBtn" style="background-color:#ff6600;">Export Payments to Excel</button>
+    <input type="file" id="uploadFile" accept=".xlsx,.csv" />
+    <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
+
     <table>
       <thead>
         <tr>
@@ -116,7 +114,7 @@
 
 <script>
   const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+  const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const authSection = document.getElementById('auth-section');
@@ -206,27 +204,39 @@
     }
   });
 
-  const exportBtn = document.createElement('button');
-  exportBtn.textContent = "Export Payments CSV";
-  exportBtn.style.backgroundColor = "#ff6600";
-  exportBtn.style.marginTop = "10px";
-  exportBtn.addEventListener('click', async () => {
-    const { data, error } = await supabase.from('payments')
-      .select('*')
-      .eq('user_email', (await supabase.auth.getUser()).data.user.email);
-    if (error || !data.length) return showMessage("❌ No data to export", "error");
+  // Export to Excel
+  document.getElementById('exportExcelBtn').addEventListener('click', async () => {
+    const { data, error } = await supabase.from('payments').select('*');
+    if (error || !data?.length) return showMessage("❌ No data to export", "error");
 
-    const headers = Object.keys(data[0]);
-    const csvRows = [headers.join(",")];
-    data.forEach(row => csvRows.push(headers.map(h => `"${row[h] ?? ""}"`).join(",")));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Payments');
 
-    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = "filofax_payments.csv";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, 'payments.xlsx');
   });
-  trackerView.appendChild(exportBtn);
+
+  // Upload Excel / CSV
+  document.getElementById('uploadBtn').addEventListener('click', async () => {
+    const file = document.getElementById('uploadFile').files[0];
+    if (!file) return showMessage("Please select a file to upload", "error");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      const { error } = await supabase.from('payments').insert(jsonData);
+      if (error) showMessage("Upload failed: " + error.message, "error");
+      else showMessage("✅ File uploaded successfully!");
+    };
+    reader.readAsArrayBuffer(file);
+  });
 
   async function loadPayments(user_email) {
     const { data, error } = await supabase.from('payments')
