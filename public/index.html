@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FiloFax - Financial Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6a0dad">
   <style>
     body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 10px; }
     .container { max-width: 650px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
-    input, button { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    input, button, select { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
     button { background-color: #6a0dad; color: white; font-weight: bold; cursor: pointer; border: none; }
     button:hover { background-color: #4b0082; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
@@ -26,7 +25,7 @@
     .logo { text-align:center; margin-bottom: 20px; }
     .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
     @media screen and (max-width: 480px) {
-      input, button { font-size: 0.9em; padding: 8px; }
+      input, button, select { font-size: 0.9em; padding: 8px; }
       th, td { font-size: 0.8em; }
       .tab-btn { font-size: 0.8em; }
     }
@@ -42,36 +41,7 @@
         .catch(err => console.log('Service Worker registration failed:', err));
     });
   }
-
-  // Optional: Listen for the install prompt event
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show your custom install button
-    const installBtn = document.createElement('button');
-    installBtn.textContent = 'Install FiloFax';
-    installBtn.style.position = 'fixed';
-    installBtn.style.bottom = '20px';
-    installBtn.style.left = '20px';
-    installBtn.style.padding = '12px 20px';
-    installBtn.style.backgroundColor = '#6a0dad';
-    installBtn.style.color = 'white';
-    installBtn.style.border = 'none';
-    installBtn.style.borderRadius = '8px';
-    installBtn.style.zIndex = '9999';
-    document.body.appendChild(installBtn);
-
-    installBtn.addEventListener('click', async () => {
-      installBtn.style.display = 'none';
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log('User choice:', outcome);
-      deferredPrompt = null;
-    });
-  });
 </script>
-
 
 <div class="logo">
   <h1>💰FiloFax</h1>
@@ -102,6 +72,14 @@
     <input type="text" id="customer" placeholder="Customer Name Or Email Address" />
     <input type="number" id="amount" placeholder="Amount ($)" step="0.01" />
     <input type="date" id="date_paid" placeholder="Arrived or Delivery date" />
+    <select id="payment_type">
+      <option value="">Select Payment Type</option>
+      <option value="Stripe">Stripe</option>
+      <option value="PayPal">PayPal</option>
+      <option value="Cash">Cash</option>
+      <option value="Bank Transfer">Bank Transfer</option>
+      <option value="Other">Other</option>
+    </select>
     <label><input type="checkbox" id="deposited" /> Click box if Deposited</label>
     <input type="date" id="deposited_date" placeholder="Deposited Date" />
     <button id="addPaymentBtn">Add Payment</button>
@@ -113,6 +91,7 @@
           <th>Customer</th>
           <th>Amount</th>
           <th>Date Paid</th>
+          <th>Payment Type</th>
           <th>Deposited</th>
           <th>Deposited Date</th>
         </tr>
@@ -136,10 +115,9 @@
 </div>
 
 <script>
-    // --- SUPABASE CONFIG ---
-    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const authSection = document.getElementById('auth-section');
   const appSection = document.getElementById('app-section');
@@ -159,7 +137,6 @@
     setTimeout(() => (messageBox.textContent = ""), 4000);
   }
 
-  // LOGIN
   document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -168,7 +145,6 @@
     else { authMessage.textContent = "✅ Login successful!"; showApp(data.user); }
   });
 
-  // REGISTER
   document.getElementById('registerBtn').addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -177,25 +153,20 @@
     else authMessage.textContent = "✅ Registered successfully! You can now login.";
   });
 
-  // LOGOUT
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     await supabase.auth.signOut();
     appSection.classList.add('hidden');
     authSection.classList.remove('hidden');
-    document.getElementById('email').value = "";
-    document.getElementById('password').value = "";
   });
 
-  // SHOW APP
   async function showApp(user) {
     authSection.classList.add('hidden');
     appSection.classList.remove('hidden');
     welcome.textContent = `Welcome, ${user.email}!`;
-    loadPayments(user.email); // use email for insert
+    loadPayments(user.email);
     loadUserDirectory();
   }
 
-  // ADD PAYMENT
   document.getElementById('addPaymentBtn').addEventListener('click', async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return showMessage("Please log in first.", "error");
@@ -204,11 +175,12 @@
     const customer = document.getElementById('customer').value.trim();
     const amount = parseFloat(document.getElementById('amount').value);
     const date_paid = document.getElementById('date_paid').value;
+    const payment_type = document.getElementById('payment_type').value;
     const deposited = document.getElementById('deposited').checked;
     const deposited_date = document.getElementById('deposited_date').value || null;
 
-    if (!invoice || !customer || !amount || !date_paid) {
-      showMessage("Invoice, Customer, Amount, and Date Paid are required.", "error");
+    if (!invoice || !customer || !amount || !date_paid || !payment_type) {
+      showMessage("All fields except deposited date are required.", "error");
       return;
     }
 
@@ -219,6 +191,7 @@
       customer,
       amount,
       date_paid,
+      payment_type,
       deposited,
       deposited_date
     }]);
@@ -227,11 +200,12 @@
     else {
       showMessage("✅ Payment added successfully!");
       loadPayments(user.email);
-      document.querySelectorAll('#trackerView input').forEach(i => { if(i.type==='checkbox') i.checked=false; else i.value=''; });
+      document.querySelectorAll('#trackerView input, #trackerView select').forEach(i => {
+        if(i.type==='checkbox') i.checked=false; else i.value='';
+      });
     }
   });
 
-  // EXPORT PAYMENTS TO CSV
   const exportBtn = document.createElement('button');
   exportBtn.textContent = "Export Payments CSV";
   exportBtn.style.backgroundColor = "#ff6600";
@@ -240,43 +214,30 @@
     const { data, error } = await supabase.from('payments')
       .select('*')
       .eq('user_email', (await supabase.auth.getUser()).data.user.email);
-
     if (error || !data.length) return showMessage("❌ No data to export", "error");
 
     const headers = Object.keys(data[0]);
     const csvRows = [headers.join(",")];
-
-    data.forEach(row => {
-      const values = headers.map(h => `"${row[h] ?? ""}"`);
-      csvRows.push(values.join(","));
-    });
+    data.forEach(row => csvRows.push(headers.map(h => `"${row[h] ?? ""}"`).join(",")));
 
     const blob = new Blob([csvRows.join("\n")], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
-    a.href = url;
-    a.download = "filofax_payments.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = "filofax_payments.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
-
   trackerView.appendChild(exportBtn);
 
-  // LOAD PAYMENTS
   async function loadPayments(user_email) {
     const { data, error } = await supabase.from('payments')
       .select('*')
       .eq('user_email', user_email)
       .order('date_paid', { ascending: false });
-
     paymentsTable.innerHTML = "";
     if (error || !data?.length) {
-      paymentsTable.innerHTML = "<tr><td colspan='6'>No payments yet</td></tr>";
+      paymentsTable.innerHTML = "<tr><td colspan='7'>No payments yet</td></tr>";
       return;
     }
-
     data.forEach(p => {
       paymentsTable.innerHTML += `
         <tr>
@@ -284,26 +245,23 @@
           <td>${p.customer}</td>
           <td>$${p.amount.toFixed(2)}</td>
           <td>${p.date_paid}</td>
+          <td>${p.payment_type || '-'}</td>
           <td>${p.deposited ? '✅' : '❌'}</td>
           <td>${p.deposited_date || '-'}</td>
         </tr>`;
     });
   }
 
-  // LOAD USER DIRECTORY
   async function loadUserDirectory() {
-    const { data, error } = await supabase.from('payments')
-      .select('user_email, amount');
-    if(error || !data?.length) return;
+    const { data, error } = await supabase.from('payments').select('user_email, amount');
+    if (error || !data?.length) return;
     const totals = {};
     data.forEach(p => totals[p.user_email] = (totals[p.user_email] || 0) + p.amount);
     userDirectoryTable.innerHTML = "";
-    for(const email in totals) {
+    for (const email in totals)
       userDirectoryTable.innerHTML += `<tr><td>${email}</td><td>$${totals[email].toFixed(2)}</td></tr>`;
-    }
   }
 
-  // TAB SWITCHING
   trackerTab.addEventListener('click', () => {
     trackerTab.classList.add('active');
     directoryTab.classList.remove('active');
@@ -318,21 +276,10 @@
     trackerView.classList.add('hidden');
   });
 
-  // AUTO LOGIN CHECK
   (async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) showApp(user);
   })();
-
-  // REGISTER SERVICE WORKER (PWA)
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered', reg))
-        .catch(err => console.log('Service Worker registration failed', err));
-    });
-  }
-
 </script>
 </body>
 </html>
