@@ -26,6 +26,7 @@
     .error { background: #ffe6e6; color: #a30000; }
     .logo { text-align:center; margin-bottom: 20px; }
     .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+    label { font-weight: bold; margin-top: 8px; display:block; }
     @media screen and (max-width: 480px) {
       input, button, select { font-size: 0.9em; padding: 8px; }
       th, td { font-size: 0.8em; }
@@ -60,10 +61,19 @@
 
   <!-- PAYMENT TRACKER -->
   <div id="trackerView">
-    <input type="text" id="invoice" placeholder="Invoice # Or PO Number" />
-    <input type="text" id="customer" placeholder="Customer Name Or Email Address" />
-    <input type="number" id="amount" placeholder="Amount ($)" step="0.01" />
-    <input type="date" id="date_paid" placeholder="Arrived or Delivery date" />
+    <label for="invoice">Invoice # or PO Number</label>
+    <input type="text" id="invoice" placeholder="Enter invoice or PO number" />
+
+    <label for="customer">Customer Name or Email</label>
+    <input type="text" id="customer" placeholder="Enter customer name or email" />
+
+    <label for="amount">Amount ($)</label>
+    <input type="number" id="amount" placeholder="Enter amount" step="0.01" />
+
+    <label for="date_paid">Payment Date</label>
+    <input type="date" id="date_paid" placeholder="Enter payment date" />
+
+    <label for="payment_type">Payment Type</label>
     <select id="payment_type">
       <option value="">Select Payment Type</option>
       <option value="Stripe">Stripe</option>
@@ -72,8 +82,12 @@
       <option value="Bank Transfer">Bank Transfer</option>
       <option value="Other">Other</option>
     </select>
+
     <label><input type="checkbox" id="deposited" /> Click box if Deposited</label>
-    <input type="date" id="deposited_date" placeholder="Deposited Date" />
+
+    <label for="deposited_date">Deposited Date (if deposited)</label>
+    <input type="date" id="deposited_date" placeholder="Enter deposited date" />
+
     <button id="addPaymentBtn">Add Payment</button>
     <div id="messageBox"></div>
 
@@ -113,11 +127,10 @@
 </div>
 
 <script>
-     // --- SUPABASE CONFIG ---
-    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+  // --- SUPABASE CONFIG ---
+  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const authSection = document.getElementById('auth-section');
   const appSection = document.getElementById('app-section');
