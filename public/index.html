@@ -26,6 +26,10 @@ th { background: #6a0dad; color: white; }
 .error { background: #ffe6e6; color: #a30000; }
 .logo { text-align:center; margin-bottom: 20px; }
 .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+.budget-card { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-around; margin-top:10px; }
+.budget-box { background:#f4f4f4; border-radius:8px; padding:10px; text-align:center; flex:1; min-width:150px; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+.budget-box h4 { margin:0; color:#6a0dad; }
+.budget-box p { margin:5px 0 0; font-weight:bold; }
 @media screen and (max-width: 480px) {
   input, button, select { font-size: 0.9em; padding: 8px; }
   th, td { font-size: 0.8em; }
@@ -57,6 +61,26 @@ th { background: #6a0dad; color: white; }
 <div style="display:flex; justify-content:space-between;">
   <button id="trackerTab" class="tab-btn active">My Payments</button>
   <button id="directoryTab" class="tab-btn">User Directory</button>
+</div>
+
+<!-- BUDGET SUMMARY -->
+<div id="budgetSummary" class="budget-card hidden">
+  <div class="budget-box">
+    <h4>Total Payments</h4>
+    <p id="totalPayments">$0.00</p>
+  </div>
+  <div class="budget-box">
+    <h4>Deposited</h4>
+    <p id="totalDeposited">$0.00</p>
+  </div>
+  <div class="budget-box">
+    <h4>Pending</h4>
+    <p id="totalPending">$0.00</p>
+  </div>
+  <div class="budget-box">
+    <h4>Remaining Budget</h4>
+    <p id="remainingBudget">$0.00</p>
+  </div>
 </div>
 
 <!-- PAYMENT TRACKER -->
@@ -96,6 +120,9 @@ th { background: #6a0dad; color: white; }
   <input type="file" id="uploadFile" accept=".xlsx,.csv" />
   <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
 
+  <label>Search Payments:</label>
+  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
+
   <table>
     <thead>
       <tr>
@@ -110,9 +137,6 @@ th { background: #6a0dad; color: white; }
     </thead>
     <tbody id="paymentsTable"></tbody>
   </table>
-
-  <label>Search Payments:</label>
-  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
 </div>
 
 <!-- USER DIRECTORY -->
@@ -135,63 +159,64 @@ th { background: #6a0dad; color: white; }
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
 const paymentsTable = document.getElementById('paymentsTable');
-const userDirectoryTable = document.getElementById('userDirectoryTable');
-const welcome = document.getElementById('welcome');
-const authMessage = document.getElementById('authMessage');
-const trackerView = document.getElementById('trackerView');
-const directoryView = document.getElementById('directoryView');
-const trackerTab = document.getElementById('trackerTab');
-const directoryTab = document.getElementById('directoryTab');
-const messageBox = document.getElementById('messageBox');
-const searchPayments = document.getElementById('searchPayments');
+const budgetSummary = document.getElementById('budgetSummary');
+const totalPayments = document.getElementById('totalPayments');
+const totalDeposited = document.getElementById('totalDeposited');
+const totalPending = document.getElementById('totalPending');
+const remainingBudget = document.getElementById('remainingBudget');
+
+const BUDGET_LIMIT = 10000; // Example total budget
 
 function showMessage(msg, type="success") {
-  messageBox.textContent = msg;
-  messageBox.className = type === "error" ? "error" : "success";
-  setTimeout(() => (messageBox.textContent = ""), 4000);
+  const box = document.getElementById('messageBox');
+  box.textContent = msg;
+  box.className = type === "error" ? "error" : "success";
+  setTimeout(() => (box.textContent = ""), 4000);
 }
 
-// --- AUTH ---
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) authMessage.textContent = "❌ Login failed: " + error.message;
-  else { authMessage.textContent = "✅ Login successful!"; showApp(data.user); }
-});
+async function loadPayments(user_email) {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('user_email', user_email)
+    .order('date_paid', { ascending: false });
 
-document.getElementById('registerBtn').addEventListener('click', async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) authMessage.textContent = "❌ Registration failed: " + error.message;
-  else authMessage.textContent = "✅ Registered successfully! You can now login.";
-});
+  paymentsTable.innerHTML = "";
+  if (error || !data?.length) {
+    paymentsTable.innerHTML = "<tr><td colspan='7'>No payments found</td></tr>";
+    budgetSummary.classList.add('hidden');
+    return;
+  }
 
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  appSection.classList.add('hidden');
-  authSection.classList.remove('hidden');
-});
+  let total = 0, deposited = 0, pending = 0;
 
-// --- SHOW APP ---
-async function showApp(user) {
-  authSection.classList.add('hidden');
-  appSection.classList.remove('hidden');
-  welcome.textContent = `Welcome, ${user.email}!`;
-  loadPayments(user.email);
-  loadUserDirectory();
+  data.forEach(p => {
+    paymentsTable.innerHTML += `
+      <tr>
+        <td>${p.invoice}</td>
+        <td>${p.customer}</td>
+        <td>$${p.amount.toFixed(2)}</td>
+        <td>${p.date_paid}</td>
+        <td>${p.payment_type}</td>
+        <td>${p.deposited ? "✅" : "❌"}</td>
+        <td>${p.deposited_date || "-"}</td>
+      </tr>`;
+    total += p.amount;
+    if (p.deposited) deposited += p.amount; else pending += p.amount;
+  });
+
+  totalPayments.textContent = `$${total.toFixed(2)}`;
+  totalDeposited.textContent = `$${deposited.toFixed(2)}`;
+  totalPending.textContent = `$${pending.toFixed(2)}`;
+  remainingBudget.textContent = `$${(BUDGET_LIMIT - total).toFixed(2)}`;
+  budgetSummary.classList.remove('hidden');
 }
 
-// --- ADD PAYMENT ---
 document.getElementById('addPaymentBtn').addEventListener('click', async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return showMessage("Please log in first.", "error");
-
   const invoice = document.getElementById('invoice').value.trim();
   const customer = document.getElementById('customer').value.trim();
   const amount = parseFloat(document.getElementById('amount').value);
@@ -208,32 +233,20 @@ document.getElementById('addPaymentBtn').addEventListener('click', async () => {
   const { error } = await supabase.from('payments').insert([{
     user_email: user.email,
     created_by: user.id,
-    invoice,
-    customer,
-    amount,
-    date_paid,
-    payment_type,
-    deposited,
-    deposited_date
+    invoice, customer, amount, date_paid, payment_type, deposited, deposited_date
   }]);
 
   if (error) showMessage("❌ Insert failed: " + error.message, "error");
-  else {
-    showMessage("✅ Payment added successfully!");
-    loadPayments(user.email);
-    document.querySelectorAll('#trackerView input, #trackerView select').forEach(i => {
-      if(i.type==='checkbox') i.checked=false; else i.value='';
-    });
-  }
+  else { showMessage("✅ Payment added!"); loadPayments(user.email); }
 });
-
-// Export & Upload code goes here (CSV, Excel, Upload)
-
-// Load Payments / Users / Search / Tabs code goes here
 
 (async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) showApp(user);
+  if (user) {
+    authSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    loadPayments(user.email);
+  }
 })();
 </script>
 </body>
