@@ -154,14 +154,12 @@ const welcome = document.getElementById('welcome');
 const roleDisplay = document.getElementById('roleDisplay');
 const messageBox = document.getElementById('messageBox');
 
-// Helper
 function showMessage(msg, type="success") {
   messageBox.textContent = msg;
   messageBox.className = type==="error"?"error":"success";
   setTimeout(()=>messageBox.textContent="",4000);
 }
 
-// AUTH
 document.getElementById('loginBtn').addEventListener('click', async()=>{
   const email=document.getElementById('email').value;
   const password=document.getElementById('password').value;
@@ -169,6 +167,7 @@ document.getElementById('loginBtn').addEventListener('click', async()=>{
   if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
   showApp(data.user);
 });
+
 document.getElementById('registerBtn').addEventListener('click', async()=>{
   const email=document.getElementById('email').value;
   const password=document.getElementById('password').value;
@@ -177,7 +176,6 @@ document.getElementById('registerBtn').addEventListener('click', async()=>{
   document.getElementById('authMessage').textContent="✅ Registered successfully!";
 });
 
-// SHOW APP
 async function showApp(user){
   authSection.classList.add('hidden');
   appSection.classList.remove('hidden');
@@ -195,14 +193,12 @@ async function showApp(user){
   if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
 }
 
-// LOGOUT
 document.getElementById('logoutBtn').addEventListener('click', async()=>{
   await supabase.auth.signOut();
   appSection.classList.add('hidden');
   authSection.classList.remove('hidden');
 });
 
-// ADD PAYMENT
 document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
   const { data:{ user } } = await supabase.auth.getUser();
   const invoice=document.getElementById('invoice').value.trim();
@@ -226,7 +222,6 @@ document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
   }
 });
 
-// LOAD SUBMISSION HISTORY
 async function loadMyHistory(userEmail){
   const { data, error } = await supabase.from('payments').select('*').eq('user_email',userEmail).order('date_paid',{ascending:false});
   myHistoryTable.innerHTML='';
@@ -247,7 +242,6 @@ async function loadMyHistory(userEmail){
   });
 }
 
-// LOAD USER DIRECTORY
 async function loadUserDirectory(role){
   const { data, error } = await supabase.from('profiles').select('email,role');
   if(error||!data.length) return;
