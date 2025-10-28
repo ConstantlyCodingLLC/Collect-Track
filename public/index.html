@@ -180,8 +180,25 @@ async function showApp(user){
   authSection.classList.add('hidden');
   appSection.classList.remove('hidden');
   welcome.textContent=`Welcome, ${user.email}`;
-  
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id',user.id).single();
+
+  // -------------------------
+  // Ensure the user has a profile
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .single();
+
+  if(!existingProfile){
+    await supabase.from('profiles').insert({
+      id: user.id,
+      email: user.email,  // optional, keeps email in profile
+      role: user.email === 'constantlycodingllc@gmail.com' ? 'Admin' : 'Employee'
+    });
+  }
+  // -------------------------
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   const role = profile?.role || 'Employee';
   roleDisplay.textContent=`Role: ${role}`;
 
