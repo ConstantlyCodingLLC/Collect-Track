@@ -24,6 +24,7 @@ th { background: #6a0dad; color: white; }
 .error { background: #ffe6e6; color: #a30000; }
 .logo { text-align:center; margin-bottom: 20px; }
 .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+.details-section { margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; }
 </style>
 </head>
 <body>
@@ -51,15 +52,13 @@ th { background: #6a0dad; color: white; }
   <button id="directoryTab" class="tab-btn">User Directory</button>
 </div>
 
-
-<!-- For BusinessOwner/Admin -->
+<!-- BUDGET CONTROL (Admin/Owner only) -->
 <div id="budgetSetSection" class="hidden">
   <label>Set Budget for Employee</label>
   <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
   <input type="number" id="budgetAmount" placeholder="Budget Amount" />
   <button id="setBudgetBtn">Set Budget</button>
 </div>
-
 
 <!-- PAYMENT TRACKER -->
 <div id="trackerView">
@@ -92,7 +91,6 @@ th { background: #6a0dad; color: white; }
   <button id="addPaymentBtn">Add Payment</button>
   <div id="messageBox"></div>
 
-  <!-- Export & Upload -->
   <button id="exportCSVBtn" style="background-color:#ff6600;">Export Payments CSV</button>
   <button id="exportExcelBtn" style="background-color:#ff6600;">Export Payments Excel</button>
   <input type="file" id="uploadFile" accept=".xlsx,.csv" />
@@ -101,15 +99,19 @@ th { background: #6a0dad; color: white; }
   <label>Search Payments:</label>
   <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
 
-<h3>Budget</h3>
-<p id="budgetDisplay">$0.00</p>
+  <h3>Budget</h3>
+  <p id="budgetDisplay">$0.00</p>
 
-<!-- For BusinessOwner/Admin -->
-<div id="budgetSetSection" class="hidden">
-  <label>Set Budget for Employee</label>
-  <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
-  <input type="number" id="budgetAmount" placeholder="Budget Amount" />
-  <button id="setBudgetBtn">Set Budget</button>
+  <!-- Submission History -->
+  <div class="details-section">
+    <h3>My Submission History</h3>
+    <table>
+      <thead>
+        <tr><th>Invoice</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th></tr>
+      </thead>
+      <tbody id="myHistoryTable"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- USER DIRECTORY -->
@@ -139,15 +141,14 @@ th { background: #6a0dad; color: white; }
 </div>
 
 <script>
-    // --- SUPABASE CONFIG ---
-    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const authSection = document.getElementById('auth-section');
 const appSection = document.getElementById('app-section');
 const paymentsTable = document.getElementById('paymentsTable');
+const myHistoryTable = document.getElementById('myHistoryTable');
 const userDirectoryTable = document.getElementById('userDirectoryTable');
 const welcome = document.getElementById('welcome');
 const roleDisplay = document.getElementById('roleDisplay');
@@ -187,9 +188,9 @@ async function showApp(user){
   roleDisplay.textContent=`Role: ${role}`;
 
   loadPayments(user.email, role);
+  loadMyHistory(user.email);
   loadUserDirectory(role);
 
-  // Permissions
   if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
   if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
 }
@@ -220,78 +221,32 @@ document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
   if(error) showMessage("❌ "+error.message,"error");
   else{
     showMessage("✅ Payment added successfully!");
-    loadPayments(user.email,(await supabase.from('profiles').select('role').eq('id',user.id).single()).data.role);
+    loadMyHistory(user.email);
     document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
   }
 });
 
-// ASSIGN ROLE
-document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
-  const userEmail=document.getElementById('roleUserEmail').value.trim();
-  const newRole=document.getElementById('roleSelect').value;
-  if(!userEmail||!newRole) return showMessage("Fill email and role","error");
-  const { error } = await supabase.from('profiles').update({role:newRole}).eq('email',userEmail);
-  if(error) showMessage("❌ "+error.message,"error");
-  else showMessage(`✅ ${userEmail} set as ${newRole}`);
-});
-
-// LOAD PAYMENTS
-async function loadPayments(email, role){
-  const { data, error } = await supabase.from('payments').select('*').order('date_paid',{ascending:false});
-  paymentsTable.innerHTML='';
-  if(error||!data.length){ paymentsTable.innerHTML="<tr><td colspan='7'>No payments yet</td></tr>"; return; }
-  const filtered = role==='Admin'||role==='BusinessOwner'? data : data.filter(p=>p.user_email===email);
-  let budgetTotal=0;
-  filtered.forEach(p=>{
-    paymentsTable.innerHTML+=`<tr>
-      <td>${p.invoice}</td>
-      <td>${p.customer}</td>
-      <td>$${p.amount.toFixed(2)}</td>
-      <td>${p.date_paid}</td>
-      <td>${p.payment_type||'-'}</td>
-      <td>${p.deposited?'✅':'❌'}</td>
-      <td>${p.deposited_date||'-'}</td>
-    </tr>`;
-    budgetTotal+=p.amount;
+// LOAD SUBMISSION HISTORY
+async function loadMyHistory(userEmail){
+  const { data, error } = await supabase.from('payments').select('*').eq('user_email',userEmail).order('date_paid',{ascending:false});
+  myHistoryTable.innerHTML='';
+  if(error || !data.length){
+    myHistoryTable.innerHTML = "<tr><td colspan='6'>No submissions yet.</td></tr>";
+    return;
+  }
+  data.forEach(p=>{
+    myHistoryTable.innerHTML+=`
+      <tr>
+        <td>${p.invoice}</td>
+        <td>${p.customer}</td>
+        <td>$${p.amount.toFixed(2)}</td>
+        <td>${p.date_paid}</td>
+        <td>${p.payment_type}</td>
+        <td>${p.deposited?'✅':'❌'}</td>
+      </tr>`;
   });
-  document.getElementById('budgetDisplay').textContent=`$${budgetTotal.toFixed(2)}`;
 }
 
-// Load Budget
-async function loadBudget(userEmail, role){
-    if(role==='Employee'){
-        // Employee sees only their own payments sum
-        const { data } = await supabase.from('payments').select('amount').eq('user_email', userEmail);
-        const total = data.reduce((sum,p)=>sum + parseFloat(p.amount), 0);
-        document.getElementById('budgetDisplay').textContent = `$${total.toFixed(2)}`;
-    } else {
-        // BusinessOwner/Admin can see all users budgets
-        const { data } = await supabase.from('profiles').select('email, budget');
-        document.getElementById('budgetDisplay').textContent = "Employee Budgets:";
-        let html = "<ul>";
-        data.forEach(u => html += `<li>${u.email}: $${(u.budget||0).toFixed(2)}</li>`);
-        html += "</ul>";
-        document.getElementById('budgetDisplay').innerHTML = html;
-
-        // Show set budget section
-        document.getElementById('budgetSetSection').classList.remove('hidden');
-    }
-}
-
-// Set Budget (BusinessOwner/Admin)
-document.getElementById('setBudgetBtn').addEventListener('click', async ()=>{
-    const email = document.getElementById('budgetUserEmail').value.trim();
-    const amount = parseFloat(document.getElementById('budgetAmount').value);
-    if(!email || isNaN(amount)) return showMessage("Enter valid email and amount","error");
-    const { error } = await supabase.from('profiles').update({budget: amount}).eq('email', email);
-    if(error) showMessage("❌ "+error.message,"error");
-    else{
-        showMessage(`✅ Budget for ${email} set to $${amount}`);
-        loadBudget(email, (await supabase.from('profiles').select('role').eq('email', email).single()).data.role);
-    }
-});
-
-  
 // LOAD USER DIRECTORY
 async function loadUserDirectory(role){
   const { data, error } = await supabase.from('profiles').select('email,role');
