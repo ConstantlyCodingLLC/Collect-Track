@@ -192,23 +192,44 @@ async function showApp(user){
   if(!existingProfile){
     await supabase.from('profiles').insert({
       id: user.id,
-      email: user.email,  // optional, keeps email in profile
-      role: user.email === 'constantlycodingllc@gmail.com' ? 'Admin' : 'Employee'
+      email: user.email,
+      role: user.email === 'constantlycodingllc@gmail.com' ? 'Admin' : 'Employee',
+      manager_id: null
     });
   }
   // -------------------------
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('role, manager_id').eq('id', user.id).single();
   const role = profile?.role || 'Employee';
+  const managerId = profile?.manager_id;
   roleDisplay.textContent=`Role: ${role}`;
 
   loadPayments(user.email, role);
   loadMyHistory(user.email);
-  loadUserDirectory(role);
+  loadUserDirectory(role, user.id);
 
   if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
   if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
 }
+
+// -------------------------
+document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
+  const roleEmail = document.getElementById('roleUserEmail').value.trim();
+  const roleValue = document.getElementById('roleSelect').value;
+  if(!roleEmail || !roleValue) return showMessage("Enter user email and role.","error");
+
+  const { data: userProfile } = await supabase.from('profiles').select('id').eq('email', roleEmail).single();
+  if(!userProfile) return showMessage("User not found.","error");
+
+  const { data: currentUser } = await supabase.auth.getUser();
+  const managerId = currentUser.data.user.id;
+
+  const { error } = await supabase.from('profiles').update({ role: roleValue, manager_id: managerId }).eq('id', userProfile.id);
+  if(error) return showMessage("❌ "+error.message,"error");
+  showMessage("✅ Role updated successfully!");
+  loadUserDirectory(roleValue, managerId);
+});
+// -------------------------
 
 document.getElementById('logoutBtn').addEventListener('click', async()=>{
   await supabase.auth.signOut();
@@ -259,10 +280,15 @@ async function loadMyHistory(userEmail){
   });
 }
 
-async function loadUserDirectory(role){
-  const { data, error } = await supabase.from('profiles').select('email,role');
+async function loadUserDirectory(role, currentUserId){
+  let { data, error } = await supabase.from('profiles').select('id,email,role,manager_id');
   if(error||!data.length) return;
   userDirectoryTable.innerHTML='';
+
+  if(role==='BusinessOwner') data = data.filter(u => u.manager_id === currentUserId || u.id === currentUserId);
+  else if(role==='Employee') data = data.filter(u => u.id === currentUserId);
+  // Admin sees all, no filter
+
   for(const u of data){
     let total=0;
     if(role==='Admin'||role==='BusinessOwner'){
