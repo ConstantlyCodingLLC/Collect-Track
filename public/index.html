@@ -8,27 +8,28 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
-body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 10px; }
-.container { max-width: 800px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
-input, button, select { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
-button { background-color: #6a0dad; color: white; font-weight: bold; cursor: pointer; border: none; }
-button:hover { background-color: #4b0082; }
-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
-th, td { border: 1px solid #ccc; text-align: left; padding: 8px; word-break: break-word; }
-th { background: #6a0dad; color: white; }
-.hidden { display: none; }
-.tab-btn { width: 48%; background: #f4f4f4; color: #333; border: 1px solid #ccc; font-size: 0.9em; }
-.tab-btn.active { background: #6a0dad; color: #fff; }
-#messageBox { margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; font-size: 0.9em; }
-.success { background: #e6ffed; color: #056608; }
-.error { background: #ffe6e6; color: #a30000; }
-.logo { text-align:center; margin-bottom: 20px; }
-.logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
-.details-section { margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; }
-.dashboard { display:flex; gap:12px; margin-bottom:12px; }
-.dash-card { flex:1; padding:12px; border-radius:8px; background:#f9f9fb; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-.small { font-size:0.9em; color:#666; }
-.upcoming-list { max-height:160px; overflow:auto; }
+  body { font-family: Arial; background: #f4f6f8; margin: 0; padding: 10px; }
+  .container { max-width: 900px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+  input, button, select { width: 100%; margin: 8px 0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+  button { background-color: #6a0dad; color: white; font-weight: bold; cursor: pointer; border: none; }
+  button:hover { background-color: #4b0082; }
+  table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
+  th, td { border: 1px solid #ccc; text-align: left; padding: 8px; word-break: break-word; }
+  th { background: #6a0dad; color: white; }
+  .hidden { display: none; }
+  .tab-btn { width: 48%; background: #f4f4f4; color: #333; border: 1px solid #ccc; font-size: 0.9em; padding: 8px; border-radius: 6px; }
+  .tab-btn.active { background: #6a0dad; color: #fff; }
+  #messageBox { margin-top: 10px; padding: 10px; border-radius: 8px; text-align: center; font-size: 0.9em; }
+  .success { background: #e6ffed; color: #056608; }
+  .error { background: #ffe6e6; color: #a30000; }
+  .logo { text-align:center; margin-bottom: 20px; }
+  .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
+  .details-section { margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; }
+  .dashboard { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .dash-card { flex:1; min-width:220px; padding:12px; border-radius:8px; background:#f9f9fb; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .small { font-size:0.9em; color:#666; }
+  .upcoming-list { max-height:160px; overflow:auto; }
+  .notify-badge { background:#ffefc7; padding:6px; border-radius:6px; display:inline-block; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -37,465 +38,362 @@ th { background: #6a0dad; color: white; }
 
 <!-- AUTH -->
 <div class="container" id="auth-section">
-<h2>Login / Register</h2>
-<input type="email" id="email" placeholder="Email" />
-<input type="password" id="password" placeholder="Password" />
-<button id="loginBtn">Login</button>
-<button id="registerBtn">Register</button>
-<p id="authMessage"></p>
+  <h2>Login / Register</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button id="loginBtn">Login</button>
+  <button id="registerBtn">Register</button>
+  <p id="authMessage"></p>
 </div>
 
 <!-- APP -->
 <div class="container hidden" id="app-section">
-<!-- DASHBOARD (TOP) -->
-<div id="dashboardTop" class="dashboard hidden">
-  <div class="dash-card">
-    <h3>Total Amount Paid</h3>
-    <p id="totalPaid" style="font-size:1.5em; font-weight:700;">$0.00</p>
-    <p class="small">Connected to your payments</p>
+  <!-- DASHBOARD (TOP) -->
+  <div id="dashboardTop" class="dashboard hidden">
+    <div class="dash-card">
+      <h3>Total Amount Paid</h3>
+      <p id="totalPaid" style="font-size:1.5em; font-weight:700;">$0.00</p>
+      <p class="small">Connected to your payments</p>
+    </div>
+    <div class="dash-card">
+      <h3>Upcoming Due Payments (next 30 days)</h3>
+      <div id="upcomingDues" class="upcoming-list small">No upcoming due payments.</div>
+    </div>
+    <div class="dash-card">
+      <h3>Notification Settings</h3>
+      <label class="small">Send reminder email (days before due):</label>
+      <input type="number" id="notifyDaysDefault" value="3" min="0" />
+      <label class="small">Notification from (email):</label>
+      <input type="email" id="notifyFromEmail" value="constantlycodingllc@gmail.com" />
+      <button id="runNotifyBtn" style="margin-top:8px;background-color:#007bff;">Run Notifications Now</button>
+      <p class="small" style="margin-top:8px;">Reminders use your Supabase Edge Function `send_due_notifications` (if deployed) and an in-app alert fallback.</p>
+    </div>
   </div>
-  <div class="dash-card">
-    <h3>Upcoming Due Payments (next 30 days)</h3>
-    <div id="upcomingDues" class="upcoming-list small">No upcoming due payments.</div>
+
+  <h2>Financial Tracker</h2>
+  <p id="welcome"></p>
+  <p id="roleDisplay"></p>
+
+  <div style="display:flex; justify-content:space-between;">
+    <button id="trackerTab" class="tab-btn active">My Payments</button>
+    <button id="directoryTab" class="tab-btn">User Directory</button>
   </div>
-  <div class="dash-card">
-    <h3>Notification Settings</h3>
-    <label class="small">Send reminder email (days before due):</label>
-    <input type="number" id="notifyDaysDefault" value="3" min="0" />
-    <label class="small">Notification from (email):</label>
-    <input type="email" id="notifyFromEmail" value="constantlycodingllc@gmail.com" />
-    <button id="runNotifyBtn" style="margin-top:8px;background-color:#007bff;">Run Notifications Now</button>
-    <p class="small" style="margin-top:8px;">Reminders use your Supabase Edge Function `send_due_notifications` (must exist & be configured).</p>
+
+  <!-- BUDGET CONTROL (Admin/Owner only) -->
+  <div id="budgetSetSection" class="hidden">
+    <label>Set Budget for Employee</label>
+    <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
+    <input type="number" id="budgetAmount" placeholder="Budget Amount" />
+    <button id="setBudgetBtn">Set Budget</button>
   </div>
-</div>
 
-<h2>Financial Tracker</h2>
-<p id="welcome"></p>
-<p id="roleDisplay"></p>
+  <!-- PAYMENT TRACKER -->
+  <div id="trackerView">
+    <label>Invoice / PO Number</label>
+    <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number (optional)" />
 
-<div style="display:flex; justify-content:space-between;">
-  <button id="trackerTab" class="tab-btn active">My Payments</button>
-  <button id="directoryTab" class="tab-btn">User Directory</button>
-</div>
+    <label>Company (required)</label>
+    <input type="text" id="company" placeholder="Enter Company Name" />
 
-<!-- BUDGET CONTROL (Admin/Owner only) -->
-<div id="budgetSetSection" class="hidden">
-  <label>Set Budget for Employee</label>
-  <input type="text" id="budgetUserEmail" placeholder="Employee Email" />
-  <input type="number" id="budgetAmount" placeholder="Budget Amount" />
-  <button id="setBudgetBtn">Set Budget</button>
-</div>
+    <label>Customer Name / Email</label>
+    <input type="text" id="customer" placeholder="Enter Customer Name or Email" />
 
-<!-- PAYMENT TRACKER -->
-<div id="trackerView">
-  <label>Invoice / PO Number</label>
-  <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number (optional)" />
+    <label>Amount Paid ($)</label>
+    <input type="number" id="amount" placeholder="Enter Amount Paid" step="0.01" />
 
-  <label>Company (required)</label>
-  <input type="text" id="company" placeholder="Enter Company Name" />
+    <label>Date Paid (transaction date)</label>
+    <input type="date" id="date_paid" />
 
-  <label>Customer Name / Email</label>
-  <input type="text" id="customer" placeholder="Enter Customer Name or Email" />
+    <label>Payment Type</label>
+    <select id="payment_type">
+      <option value="">Select Payment Type</option>
+      <option value="Stripe">Stripe</option>
+      <option value="PayPal">PayPal</option>
+      <option value="Cash">Cash</option>
+      <option value="Bank Transfer">Bank Transfer</option>
+      <option value="Other">Other</option>
+    </select>
 
-  <label>Amount Paid ($)</label>
-  <input type="number" id="amount" placeholder="Enter Amount Paid" step="0.01" />
+    <label><input type="checkbox" id="deposited" /> Deposited?</label>
+    <label>Deposited Date</label>
+    <input type="date" id="deposited_date" />
 
-  <label>Date Paid (transaction date)</label>
-  <input type="date" id="date_paid" />
+    <label>Due Date (optional)</label>
+    <input type="date" id="due_date" />
 
-  <label>Payment Type</label>
-  <select id="payment_type">
-    <option value="">Select Payment Type</option>
-    <option value="Stripe">Stripe</option>
-    <option value="PayPal">PayPal</option>
-    <option value="Cash">Cash</option>
-    <option value="Bank Transfer">Bank Transfer</option>
-    <option value="Other">Other</option>
-  </select>
+    <label>Recurring</label>
+    <select id="recurring">
+      <option value="">None</option>
+      <option value="monthly">Monthly</option>
+      <option value="bi-weekly">Bi-Weekly</option>
+      <option value="annually">Annually</option>
+    </select>
 
-  <label><input type="checkbox" id="deposited" /> Deposited?</label>
-  <label>Deposited Date</label>
-  <input type="date" id="deposited_date" />
+    <label>Notes (tracking)</label>
+    <input type="text" id="notes" placeholder="Any notes, tracking info, etc." />
 
-  <label>Due Date (optional)</label>
-  <input type="date" id="due_date" />
+    <label>Send reminder (days before due) for this payment (optional)</label>
+    <input type="number" id="notify_days_before" placeholder="e.g., 3" min="0" />
 
-  <label>Recurring</label>
-  <select id="recurring">
-    <option value="">None</option>
-    <option value="monthly">Monthly</option>
-    <option value="bi-weekly">Bi-Weekly</option>
-    <option value="annually">Annually</option>
-  </select>
+    <button id="addPaymentBtn">Add Payment</button>
+    <div id="messageBox"></div>
 
-  <label>Notes (tracking)</label>
-  <input type="text" id="notes" placeholder="Any notes, tracking info, etc." />
+    <button id="exportCSVBtn" style="background-color:#ff6600;">Export Payments CSV</button>
+    <button id="exportExcelBtn" style="background-color:#ff6600;">Export Payments Excel</button>
+    <input type="file" id="uploadFile" accept=".xlsx,.csv" />
+    <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
 
-  <label>Send reminder (days before due) for this payment (optional)</label>
-  <input type="number" id="notify_days_before" placeholder="e.g., 3" min="0" />
+    <label>Search Payments:</label>
+    <input type="text" id="searchPayments" placeholder="Search by invoice, customer, company, notes, or type..." />
 
-  <button id="addPaymentBtn">Add Payment</button>
-  <div id="messageBox"></div>
+    <h3>Budget</h3>
+    <p id="budgetDisplay">$0.00</p>
 
-  <button id="exportCSVBtn" style="background-color:#ff6600;">Export Payments CSV</button>
-  <button id="exportExcelBtn" style="background-color:#ff6600;">Export Payments Excel</button>
-  <input type="file" id="uploadFile" accept=".xlsx,.csv" />
-  <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
+    <!-- Submission History -->
+    <div class="details-section">
+      <h3>My Submission History</h3>
+      <table>
+        <thead>
+          <tr><th>Invoice</th><th>Company</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th><th>Due Date</th><th>Recurring</th><th>Notes</th></tr>
+        </thead>
+        <tbody id="myHistoryTable"></tbody>
+      </table>
+    </div>
+  </div>
 
-  <label>Search Payments:</label>
-  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, company, notes, or type..." />
-
-  <h3>Budget</h3>
-  <p id="budgetDisplay">$0.00</p>
-
-  <!-- Submission History -->
-  <div class="details-section">
-    <h3>My Submission History</h3>
+  <!-- USER DIRECTORY -->
+  <div id="directoryView" class="hidden">
+    <h3>All Users</h3>
     <table>
       <thead>
-        <tr><th>Invoice</th><th>Company</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th><th>Due Date</th><th>Recurring</th><th>Notes</th></tr>
+        <tr><th>User Email</th><th>Role</th><th>Total Payments ($)</th></tr>
       </thead>
-      <tbody id="myHistoryTable"></tbody>
+      <tbody id="userDirectoryTable"></tbody>
     </table>
+
+    <h3>Assign Roles (BusinessOwner & Admin only)</h3>
+    <label>User Email</label>
+    <input type="text" id="roleUserEmail" placeholder="User Email" />
+    <label>Role</label>
+    <select id="roleSelect">
+      <option value="">Select Role</option>
+      <option value="Employee">Employee</option>
+      <option value="BusinessOwner">BusinessOwner</option>
+      <option value="Admin">Admin</option>
+    </select>
+    <button id="assignRoleBtn">Assign Role</button>
   </div>
-</div>
 
-<!-- USER DIRECTORY -->
-<div id="directoryView" class="hidden">
-<h3>All Users</h3>
-<table>
-  <thead>
-    <tr><th>User Email</th><th>Role</th><th>Total Payments ($)</th></tr>
-  </thead>
-  <tbody id="userDirectoryTable"></tbody>
-</table>
-
-<h3>Assign Roles (BusinessOwner & Admin only)</h3>
-<label>User Email</label>
-<input type="text" id="roleUserEmail" placeholder="User Email" />
-<label>Role</label>
-<select id="roleSelect">
-  <option value="">Select Role</option>
-  <option value="Employee">Employee</option>
-  <option value="BusinessOwner">BusinessOwner</option>
-  <option value="Admin">Admin</option>
-</select>
-<button id="assignRoleBtn">Assign Role</button>
-</div>
-
-<button id="logoutBtn">Logout</button>
+  <button id="logoutBtn">Logout</button>
 </div>
 
 <script>
-const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/*
+  Single entrypoint: wrap setup in DOMContentLoaded to ensure buttons exist before attaching listeners.
+  Hybrid notifications:
+    - in-app: compute due dates and show alerts / dashboard entries
+    - email: attempt to call Supabase Edge Function 'send_due_notifications' with { days, from_email }.
+  Default reminder: 3 days (user chose).
+*/
 
-const authSection = document.getElementById('auth-section');
-const appSection = document.getElementById('app-section');
-const paymentsTable = document.getElementById('paymentsTable');
-const myHistoryTable = document.getElementById('myHistoryTable');
-const userDirectoryTable = document.getElementById('userDirectoryTable');
-const welcome = document.getElementById('welcome');
-const roleDisplay = document.getElementById('roleDisplay');
-const messageBox = document.getElementById('messageBox');
-const dashboardTop = document.getElementById('dashboardTop');
-const totalPaidEl = document.getElementById('totalPaid');
-const upcomingDuesEl = document.getElementById('upcomingDues');
-const notifyDaysDefaultInput = document.getElementById('notifyDaysDefault');
-const notifyFromEmailInput = document.getElementById('notifyFromEmail');
+document.addEventListener('DOMContentLoaded', async () => {
+  // ---------------- Supabase config ----------------
+  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function showMessage(msg, type="success") {
-  messageBox.textContent = msg;
-  messageBox.className = type==="error"?"error":"success";
-  setTimeout(()=>messageBox.textContent="",4000);
-}
+  // ---------------- DOM refs ----------------
+  const authSection = document.getElementById('auth-section');
+  const appSection = document.getElementById('app-section');
+  const myHistoryTable = document.getElementById('myHistoryTable');
+  const userDirectoryTable = document.getElementById('userDirectoryTable');
+  const welcome = document.getElementById('welcome');
+  const roleDisplay = document.getElementById('roleDisplay');
+  const messageBox = document.getElementById('messageBox');
+  const dashboardTop = document.getElementById('dashboardTop');
+  const totalPaidEl = document.getElementById('totalPaid');
+  const upcomingDuesEl = document.getElementById('upcomingDues');
+  const notifyDaysDefaultInput = document.getElementById('notifyDaysDefault');
+  const notifyFromEmailInput = document.getElementById('notifyFromEmail');
 
-document.getElementById('loginBtn').addEventListener('click', async()=>{
-  const email=document.getElementById('email').value;
-  const password=document.getElementById('password').value;
-  const {data,error}=await supabase.auth.signInWithPassword({email,password});
-  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
-  showApp(data.user);
-});
-
-document.getElementById('registerBtn').addEventListener('click', async()=>{
-  const email=document.getElementById('email').value;
-  const password=document.getElementById('password').value;
-  const {data,error}=await supabase.auth.signUp({email,password});
-  if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
-  document.getElementById('authMessage').textContent="✅ Registered successfully!";
-});
-
-async function showApp(user){
-  authSection.classList.add('hidden');
-  appSection.classList.remove('hidden');
-  welcome.textContent=`Welcome, ${user.email}`;
-
-  // show dashboard
-  dashboardTop.classList.remove('hidden');
-
-  // -------------------------
-  // Ensure the user has a profile
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id, role')
-    .eq('id', user.id)
-    .single();
-
-  if(!existingProfile){
-    await supabase.from('profiles').insert({
-      id: user.id,
-      email: user.email,
-      role: user.email === 'constantlycodingllc@gmail.com' ? 'Admin' : 'Employee',
-      manager_id: null
-    });
+  function showMessage(msg, type="success") {
+    messageBox.textContent = msg;
+    messageBox.className = type==="error"?"error":"success";
+    setTimeout(()=>messageBox.textContent="",4000);
   }
-  // -------------------------
 
-  const { data: profile } = await supabase.from('profiles').select('role, manager_id').eq('id', user.id).single();
-  const role = profile?.role || 'Employee';
-  const managerId = profile?.manager_id;
-  roleDisplay.textContent=`Role: ${role}`;
-
-  loadPayments(user.email, role);
-  loadMyHistory(user.email);
-  loadUserDirectory(role, user.id);
-  loadDashboard();
-
-  if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
-  if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
-
-  // Run notifications once on load using default days (if desired)
-  // NOTE: This triggers the edge function; make sure send_due_notifications exists.
-  // We call it once here to honor your request for email notifications.
-  try {
-    const days = parseInt(notifyDaysDefaultInput.value) || 0;
-    await sendDueNotifications(days);
-  } catch(e){
-    // silently continue - function may not exist; user will see message if error occurs
-    console.log("sendDueNotifications error on load:", e);
-  }
-}
-
-// -------------------------
-document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
-  const roleEmail = document.getElementById('roleUserEmail').value.trim();
-  const roleValue = document.getElementById('roleSelect').value;
-  if(!roleEmail || !roleValue) return showMessage("Enter user email and role.","error");
-
-  const { data: userProfile } = await supabase.from('profiles').select('id').eq('email', roleEmail).single();
-  if(!userProfile) return showMessage("User not found.","error");
-
-  const { data: currentUser } = await supabase.auth.getUser();
-  const managerId = currentUser.data.user.id;
-
-  const { error } = await supabase.from('profiles').update({ role: roleValue, manager_id: managerId }).eq('id', userProfile.id);
-  if(error) return showMessage("❌ "+error.message,"error");
-  showMessage("✅ Role updated successfully!");
-  loadUserDirectory(roleValue, managerId);
-});
-// -------------------------
-
-document.getElementById('logoutBtn').addEventListener('click', async()=>{
-  await supabase.auth.signOut();
-  appSection.classList.add('hidden');
-  authSection.classList.remove('hidden');
-});
-
-// New: run notifications button
-document.getElementById('runNotifyBtn').addEventListener('click', async()=>{
-  const days = parseInt(notifyDaysDefaultInput.value) || 0;
-  try {
-    await sendDueNotifications(days);
-    showMessage("✅ Notification job invoked.");
-  } catch(err){
-    showMessage("❌ Error invoking notifications: "+(err.message||err), "error");
-  }
-});
-
-async function sendDueNotifications(days){
-  // Calls Supabase Edge Function 'send_due_notifications'
-  // body: { days: number, from_email: string }
-  const from_email = notifyFromEmailInput.value || "constantlycodingllc@gmail.com";
-  try {
-    const res = await supabase.functions.invoke('send_due_notifications', {
-      body: { days, from_email }
-    });
-    // supabase functions returns { data, error } sometimes depending on function
-    if(res.error) {
-      console.error("Function error:", res.error);
-      throw res.error;
+  // -------------- Auth handlers --------------
+  document.getElementById('loginBtn').addEventListener('click', async()=>{
+    const email=document.getElementById('email').value;
+    const password=document.getElementById('password').value;
+    if(!email||!password) return document.getElementById('authMessage').textContent="Enter email and password";
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+      showApp(data.user);
+    } catch(err){
+      document.getElementById('authMessage').textContent="❌ "+(err.message||err);
     }
-    // optionally show returned data in console
-    console.log("send_due_notifications response:", res);
-    return res;
-  } catch(err){
-    console.error("sendDueNotifications caught:", err);
-    throw err;
-  }
-});
-
-document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
-  const { data:{ user } } = await supabase.auth.getUser();
-  const invoice=document.getElementById('invoice').value.trim(); // optional
-  const company=document.getElementById('company').value.trim();
-  const customer=document.getElementById('customer').value.trim();
-  const amount=parseFloat(document.getElementById('amount').value);
-  const date_paid=document.getElementById('date_paid').value;
-  const payment_type=document.getElementById('payment_type').value;
-  const deposited=document.getElementById('deposited').checked;
-  const deposited_date=document.getElementById('deposited_date').value || null;
-  const due_date=document.getElementById('due_date').value || null;
-  const recurring=document.getElementById('recurring').value || null;
-  const notes=document.getElementById('notes').value.trim() || null;
-  const notify_days_before = document.getElementById('notify_days_before').value ? parseInt(document.getElementById('notify_days_before').value) : null;
-
-  // Adjusted validation: invoice is optional per your request. company required.
-  if(!company || !customer || !amount || !date_paid || !payment_type){
-    return showMessage("Company, customer, amount paid, date paid and payment type are required.","error");
-  }
-
-  // Prevent duplicate same entry (match invoice+company+amount+date_paid OR company+customer+amount+date_paid)
-  try {
-    let duplicateQuery = supabase.from('payments').select('id');
-    if(invoice){
-      duplicateQuery = duplicateQuery.eq('invoice', invoice).eq('company', company).eq('amount', amount).eq('date_paid', date_paid);
-    } else {
-      duplicateQuery = duplicateQuery.eq('company', company).eq('customer', customer).eq('amount', amount).eq('date_paid', date_paid);
-    }
-    const { data:dupData, error:dupErr } = await duplicateQuery;
-    if(dupErr) console.warn("dup check error:", dupErr);
-    if(dupData && dupData.length){
-      return showMessage("Duplicate payment entry detected. No duplicate allowed.","error");
-    }
-  } catch(e){
-    console.error("Error checking duplicates:", e);
-  }
-
-  const insertObj = {
-    user_email:user.email,
-    created_by:user.id,
-    invoice,
-    company,
-    customer,
-    amount,
-    date_paid,
-    payment_type,
-    deposited,
-    deposited_date,
-    due_date,
-    recurring,
-    notes,
-    notify_days_before
-  };
-
-  const { error } = await supabase.from('payments').insert([insertObj]);
-  if(error) showMessage("❌ "+error.message,"error");
-  else{
-    showMessage("✅ Payment added successfully!");
-    loadMyHistory(user.email);
-    loadDashboard();
-    document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
-  }
-});
-
-async function loadMyHistory(userEmail){
-  const { data, error } = await supabase.from('payments').select('*').eq('user_email',userEmail).order('date_paid',{ascending:false});
-  myHistoryTable.innerHTML='';
-  if(error || !data.length){
-    myHistoryTable.innerHTML = "<tr><td colspan='10'>No submissions yet.</td></tr>";
-    return;
-  }
-  data.forEach(p=>{
-    myHistoryTable.innerHTML+=`
-      <tr>
-        <td>${p.invoice||''}</td>
-        <td>${p.company||''}</td>
-        <td>${p.customer||''}</td>
-        <td>$${(p.amount||0).toFixed(2)}</td>
-        <td>${p.date_paid||''}</td>
-        <td>${p.payment_type||''}</td>
-        <td>${p.deposited?'✅':'❌'}</td>
-        <td>${p.due_date||''}</td>
-        <td>${p.recurring||''}</td>
-        <td>${p.notes||''}</td>
-      </tr>`;
   });
-}
 
-async function loadUserDirectory(role, currentUserId){
-  let { data, error } = await supabase.from('profiles').select('id,email,role,manager_id');
-  if(error||!data.length) return;
-  userDirectoryTable.innerHTML='';
+  document.getElementById('registerBtn').addEventListener('click', async()=>{
+    const email=document.getElementById('email').value;
+    const password=document.getElementById('password').value;
+    if(!email||!password) return document.getElementById('authMessage').textContent="Enter email and password";
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if(error) return document.getElementById('authMessage').textContent="❌ "+error.message;
+    document.getElementById('authMessage').textContent="✅ Registered successfully!";
+  });
 
-  if(role==='BusinessOwner') data = data.filter(u => u.manager_id === currentUserId || u.id === currentUserId);
-  else if(role==='Employee') data = data.filter(u => u.id === currentUserId);
-  // Admin sees all, no filter
+  document.getElementById('logoutBtn').addEventListener('click', async()=>{
+    await supabase.auth.signOut();
+    appSection.classList.add('hidden');
+    authSection.classList.remove('hidden');
+  });
 
-  for(const u of data){
-    let total=0;
-    if(role==='Admin'||role==='BusinessOwner'){
-      const payments = await supabase.from('payments').select('amount').eq('user_email',u.email);
-      total=payments.data.reduce((a,b)=>a+b.amount,0);
+  // -------------- Run Notifications button --------------
+  document.getElementById('runNotifyBtn').addEventListener('click', async()=>{
+    const days = parseInt(notifyDaysDefaultInput.value) || 3;
+    try {
+      // Try email function & also show in-app
+      await sendDueNotifications(days);
+      showMessage("✅ Notification job invoked.");
+    } catch(err){
+      showMessage("❌ Error invoking notifications: "+(err.message||err),"error");
     }
-    userDirectoryTable.innerHTML+=`<tr><td>${u.email}</td><td>${u.role}</td><td>$${total.toFixed(2)}</td></tr>`;
-  }
-}
+  });
 
-// New: Dashboard loader
-async function loadDashboard(){
-  try {
-    // total paid (all payments)
-    const { data: allPayments } = await supabase.from('payments').select('amount');
-    const total = (allPayments || []).reduce((s,p)=>s + (p.amount || 0), 0);
-    totalPaidEl.textContent = `$${total.toFixed(2)}`;
+  // -------------- Main app initializer --------------
+  async function showApp(user){
+    authSection.classList.add('hidden');
+    appSection.classList.remove('hidden');
+    welcome.textContent=`Welcome, ${user.email}`;
 
-    // upcoming dues next 30 days
-    const today = new Date().toISOString().slice(0,10);
-    const in30 = new Date(); in30.setDate(in30.getDate() + 30);
-    const in30Str = in30.toISOString().slice(0,10);
+    // show dashboard
+    dashboardTop.classList.remove('hidden');
 
-    const { data: dues } = await supabase.from('payments')
-      .select('*')
-      .not('due_date','is',null)
-      .gte('due_date', today)
-      .lte('due_date', in30Str)
-      .order('due_date', {ascending:true});
-
-    if(!dues || !dues.length){
-      upcomingDuesEl.innerHTML = '<div>No upcoming due payments.</div>';
-    } else {
-      upcomingDuesEl.innerHTML = dues.map(d=>{
-        const daysLeft = Math.ceil((new Date(d.due_date) - new Date())/(1000*60*60*24));
-        return `<div style="padding:6px;border-bottom:1px dashed #eee;">
-          <strong>${d.company||d.customer||'No company'}</strong> — $${(d.amount||0).toFixed(2)}<br/>
-          <span class="small">Due: ${d.due_date} (${daysLeft} days)</span><br/>
-          <span class="small">Recurring: ${d.recurring||'No'}</span>
-        </div>`;
-      }).join('');
+    // ensure profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles').select('id, role').eq('id', user.id).single().catch(()=>({data:null}));
+    if(!existingProfile){
+      await supabase.from('profiles').insert({
+        id: user.id,
+        email: user.email,
+        role: user.email === 'constantlycodingllc@gmail.com' ? 'Admin' : 'Employee',
+        manager_id: null
+      }).catch(e=>console.warn("profile create:", e));
     }
-  } catch(e){
-    console.error("loadDashboard error:", e);
-  }
-}
 
-// SEARCH: search across many fields (invoice, customer, company, payment_type, notes)
-document.getElementById('searchPayments').addEventListener('input', async(e)=>{
-  const q = e.target.value.trim();
-  if(!q){
-    loadMyHistory((await supabase.auth.getUser()).data.user.email);
-    return;
+    const { data: profile } = await supabase.from('profiles').select('role, manager_id').eq('id', user.id).single().catch(()=>({data:{}}));
+    const role = profile?.role || 'Employee';
+    const managerId = profile?.manager_id;
+    roleDisplay.textContent=`Role: ${role}`;
+
+    await loadPayments(user.email, role);
+    await loadMyHistory(user.email);
+    await loadUserDirectory(role, user.id);
+    await loadDashboard();
+
+    if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
+    if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
+
+    // Run notifications once on load (hybrid): default = notifyDaysDefaultInput (3)
+    try {
+      const days = parseInt(notifyDaysDefaultInput.value) || 3;
+      await sendDueNotifications(days, {silent:true}); // silent to avoid extra message
+    } catch(e){
+      console.log("sendDueNotifications error on load:", e);
+    }
   }
 
-  // Build an OR string for supabase
-  const like = `%${q}%`;
-  try {
-    const orQuery = `invoice.ilike.${like},customer.ilike.${like},company.ilike.${like},payment_type.ilike.${like},notes.ilike.${like}`;
-    const { data, error } = await supabase.from('payments').select('*').or(orQuery).order('date_paid',{ascending:false});
-    myHistoryTable.innerHTML = '';
-    if(error || !data.length) {
-      myHistoryTable.innerHTML = "<tr><td colspan='10'>No results found.</td></tr>";
+  // -------------- Assign role --------------
+  document.getElementById('assignRoleBtn').addEventListener('click', async()=>{
+    const roleEmail = document.getElementById('roleUserEmail').value.trim();
+    const roleValue = document.getElementById('roleSelect').value;
+    if(!roleEmail || !roleValue) return showMessage("Enter user email and role.","error");
+
+    const { data: userProfile } = await supabase.from('profiles').select('id').eq('email', roleEmail).single();
+    if(!userProfile) return showMessage("User not found.","error");
+
+    const { data: currentUser } = await supabase.auth.getUser();
+    const managerId = currentUser.data.user.id;
+
+    const { error } = await supabase.from('profiles').update({ role: roleValue, manager_id: managerId }).eq('id', userProfile.id);
+    if(error) return showMessage("❌ "+error.message,"error");
+    showMessage("✅ Role updated successfully!");
+    loadUserDirectory(roleValue, managerId);
+  });
+
+  // -------------- Add payment --------------
+  document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
+    const { data:{ user } } = await supabase.auth.getUser();
+    const invoice=document.getElementById('invoice').value.trim(); // optional
+    const company=document.getElementById('company').value.trim();
+    const customer=document.getElementById('customer').value.trim();
+    const amount=parseFloat(document.getElementById('amount').value);
+    const date_paid=document.getElementById('date_paid').value;
+    const payment_type=document.getElementById('payment_type').value;
+    const deposited=document.getElementById('deposited').checked;
+    const deposited_date=document.getElementById('deposited_date').value || null;
+    const due_date=document.getElementById('due_date').value || null;
+    const recurring=document.getElementById('recurring').value || null;
+    const notes=document.getElementById('notes').value.trim() || null;
+    const notify_days_before = document.getElementById('notify_days_before').value ? parseInt(document.getElementById('notify_days_before').value) : null;
+
+    // company required
+    if(!company || !customer || !amount || !date_paid || !payment_type){
+      return showMessage("Company, customer, amount paid, date paid and payment type are required.","error");
+    }
+
+    // Prevent duplicate same entry: invoice+company+amount+date_paid OR company+customer+amount+date_paid
+    try {
+      let dupResp;
+      if(invoice){
+        dupResp = await supabase.from('payments').select('id').eq('invoice', invoice).eq('company', company).eq('amount', amount).eq('date_paid', date_paid);
+      } else {
+        dupResp = await supabase.from('payments').select('id').eq('company', company).eq('customer', customer).eq('amount', amount).eq('date_paid', date_paid);
+      }
+      if(dupResp && dupResp.data && dupResp.data.length){
+        return showMessage("Duplicate payment entry detected. No duplicate allowed.","error");
+      }
+    } catch(e){
+      console.warn("Duplicate check failed:", e);
+    }
+
+    const insertObj = {
+      user_email:user.email,
+      created_by:user.id,
+      invoice,
+      company,
+      customer,
+      amount,
+      date_paid,
+      payment_type,
+      deposited,
+      deposited_date,
+      due_date,
+      recurring,
+      notes,
+      notify_days_before
+    };
+
+    const { error } = await supabase.from('payments').insert([insertObj]);
+    if(error) showMessage("❌ "+error.message,"error");
+    else{
+      showMessage("✅ Payment added successfully!");
+      await loadMyHistory(user.email);
+      await loadDashboard();
+      // clear inputs
+      document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
+    }
+  });
+
+  // -------------- Load my history --------------
+  async function loadMyHistory(userEmail){
+    const { data, error } = await supabase.from('payments').select('*').eq('user_email',userEmail).order('date_paid',{ascending:false});
+    myHistoryTable.innerHTML='';
+    if(error || !data || !data.length){
+      myHistoryTable.innerHTML = "<tr><td colspan='10'>No submissions yet.</td></tr>";
       return;
     }
     data.forEach(p=>{
@@ -513,81 +411,262 @@ document.getElementById('searchPayments').addEventListener('input', async(e)=>{
           <td>${p.notes||''}</td>
         </tr>`;
     });
-  } catch(err){
-    console.error("Search error:", err);
   }
-});
 
-document.getElementById('exportCSVBtn').addEventListener('click', async()=>{
-  // your existing export logic can be plugged here (not changed)
-  const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
-  if(!data || !data.length) return showMessage("No data to export.","error");
-  const csvRows = [];
-  const headers = Object.keys(data[0]);
-  csvRows.push(headers.join(','));
-  data.forEach(row=>{
-    const vals = headers.map(h => `"${(row[h]||'').toString().replace(/"/g,'""')}"`);
-    csvRows.push(vals.join(','));
-  });
-  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-  saveAs(blob, 'payments.csv');
-});
+  // -------------- Load user directory --------------
+  async function loadUserDirectory(role, currentUserId){
+    let { data, error } = await supabase.from('profiles').select('id,email,role,manager_id');
+    if(error||!data) return;
+    userDirectoryTable.innerHTML='';
 
-document.getElementById('exportExcelBtn').addEventListener('click', async()=>{
-  const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
-  if(!data || !data.length) return showMessage("No data to export.","error");
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Payments");
-  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
-  saveAs(new Blob([wbout],{type:"application/octet-stream"}), 'payments.xlsx');
-});
+    if(role==='BusinessOwner') data = data.filter(u => u.manager_id === currentUserId || u.id === currentUserId);
+    else if(role==='Employee') data = data.filter(u => u.id === currentUserId);
+    // Admin sees all, no filter
 
-document.getElementById('uploadBtn').addEventListener('click', async()=>{
-  const f = document.getElementById('uploadFile').files[0];
-  if(!f) return showMessage("Choose a file first.","error");
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const data = e.target.result;
-    let json;
-    if(f.name.endsWith('.csv')){
-      const text = new TextDecoder().decode(data);
-      const rows = text.split('\n').map(r=>r.split(','));
-      const headers = rows.shift().map(h=>h.replace(/"/g,'').trim());
-      json = rows.map(r=>{
-        const obj = {};
-        headers.forEach((h,i)=> obj[h]=r[i] ? r[i].replace(/"/g,'').trim() : null);
-        return obj;
-      });
-    } else {
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    for(const u of data){
+      let total=0;
+      if(role==='Admin'||role==='BusinessOwner'){
+        const payments = await supabase.from('payments').select('amount').eq('user_email',u.email);
+        if(payments && payments.data) total=payments.data.reduce((a,b)=>a + (b.amount||0),0);
+      }
+      userDirectoryTable.innerHTML+=`<tr><td>${u.email}</td><td>${u.role}</td><td>$${total.toFixed(2)}</td></tr>`;
     }
-    // Insert into supabase - you may want to validate columns match your payments table
-    const { error } = await supabase.from('payments').insert(json);
-    if(error) return showMessage("❌ "+error.message,"error");
-    showMessage("✅ File uploaded and records inserted.");
-    loadDashboard();
-  };
-  if(f.name.endsWith('.csv')) reader.readAsArrayBuffer(f);
-  else reader.readAsArrayBuffer(f);
-});
+  }
 
-// Keep original directory/tracker tab switching if you had logic (not provided originally).
-// Add simple tab switching:
-document.getElementById('trackerTab').addEventListener('click', ()=>{
-  document.getElementById('trackerView').classList.remove('hidden');
-  document.getElementById('directoryView').classList.add('hidden');
-  document.getElementById('trackerTab').classList.add('active');
-  document.getElementById('directoryTab').classList.remove('active');
-});
-document.getElementById('directoryTab').addEventListener('click', ()=>{
-  document.getElementById('trackerView').classList.add('hidden');
-  document.getElementById('directoryView').classList.remove('hidden');
-  document.getElementById('directoryTab').classList.add('active');
-  document.getElementById('trackerTab').classList.remove('active');
-});
+  // -------------- Dashboard loader --------------
+  async function loadDashboard(){
+    try {
+      // total paid (all payments)
+      const { data: allPayments } = await supabase.from('payments').select('amount');
+      const total = (allPayments || []).reduce((s,p)=>s + (p.amount || 0), 0);
+      totalPaidEl.textContent = `$${total.toFixed(2)}`;
+
+      // upcoming dues next 30 days
+      const today = new Date().toISOString().slice(0,10);
+      const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+      const in30Str = in30.toISOString().slice(0,10);
+
+      const { data: dues } = await supabase.from('payments')
+        .select('*')
+        .not('due_date','is',null)
+        .gte('due_date', today)
+        .lte('due_date', in30Str)
+        .order('due_date', {ascending:true});
+
+      if(!dues || !dues.length){
+        upcomingDuesEl.innerHTML = '<div>No upcoming due payments.</div>';
+      } else {
+        upcomingDuesEl.innerHTML = dues.map(d=>{
+          const daysLeft = Math.ceil((new Date(d.due_date) - new Date())/(1000*60*60*24));
+          return `<div style="padding:6px;border-bottom:1px dashed #eee;">
+            <strong>${escapeHtml(d.company||d.customer||'No company')}</strong> — $${(d.amount||0).toFixed(2)}<br/>
+            <span class="small">Due: ${d.due_date} (${daysLeft} days)</span><br/>
+            <span class="small">Recurring: ${d.recurring||'No'}</span>
+          </div>`;
+        }).join('');
+      }
+    } catch(e){
+      console.error("loadDashboard error:", e);
+    }
+  }
+
+  // -------------- Search (multi-field) --------------
+  document.getElementById('searchPayments').addEventListener('input', async(e)=>{
+    const q = e.target.value.trim();
+    if(!q){
+      const user = (await supabase.auth.getUser()).data.user;
+      if(user) loadMyHistory(user.email);
+      return;
+    }
+    const like = `%${q}%`;
+    try {
+      const orQuery = `invoice.ilike.${like},customer.ilike.${like},company.ilike.${like},payment_type.ilike.${like},notes.ilike.${like}`;
+      const { data, error } = await supabase.from('payments').select('*').or(orQuery).order('date_paid',{ascending:false});
+      myHistoryTable.innerHTML = '';
+      if(error || !data || !data.length) {
+        myHistoryTable.innerHTML = "<tr><td colspan='10'>No results found.</td></tr>";
+        return;
+      }
+      data.forEach(p=>{
+        myHistoryTable.innerHTML+=`
+          <tr>
+            <td>${p.invoice||''}</td>
+            <td>${p.company||''}</td>
+            <td>${p.customer||''}</td>
+            <td>$${(p.amount||0).toFixed(2)}</td>
+            <td>${p.date_paid||''}</td>
+            <td>${p.payment_type||''}</td>
+            <td>${p.deposited?'✅':'❌'}</td>
+            <td>${p.due_date||''}</td>
+            <td>${p.recurring||''}</td>
+            <td>${p.notes||''}</td>
+          </tr>`;
+      });
+    } catch(err){
+      console.error("Search error:", err);
+    }
+  });
+
+  // -------------- Export & Upload handlers --------------
+  document.getElementById('exportCSVBtn').addEventListener('click', async()=>{
+    const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
+    if(!data || !data.length) return showMessage("No data to export.","error");
+    const csvRows = [];
+    const headers = Object.keys(data[0]);
+    csvRows.push(headers.join(','));
+    data.forEach(row=>{
+      const vals = headers.map(h => `"${(row[h]||'').toString().replace(/"/g,'""')}"`);
+      csvRows.push(vals.join(','));
+    });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    saveAs(blob, 'payments.csv');
+  });
+
+  document.getElementById('exportExcelBtn').addEventListener('click', async()=>{
+    const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
+    if(!data || !data.length) return showMessage("No data to export.","error");
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payments");
+    const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    saveAs(new Blob([wbout],{type:"application/octet-stream"}), 'payments.xlsx');
+  });
+
+  document.getElementById('uploadBtn').addEventListener('click', async()=>{
+    const f = document.getElementById('uploadFile').files[0];
+    if(!f) return showMessage("Choose a file first.","error");
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = e.target.result;
+      let json;
+      if(f.name.endsWith('.csv')){
+        const text = new TextDecoder().decode(data);
+        const rows = text.split('\n').map(r=>r.split(','));
+        const headers = rows.shift().map(h=>h.replace(/"/g,'').trim());
+        json = rows.map(r=>{
+          const obj = {};
+          headers.forEach((h,i)=> obj[h]=r[i] ? r[i].replace(/"/g,'').trim() : null);
+          return obj;
+        });
+      } else {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      }
+      // Insert into supabase - you may want to validate columns match your payments table
+      const { error } = await supabase.from('payments').insert(json);
+      if(error) return showMessage("❌ "+error.message,"error");
+      showMessage("✅ File uploaded and records inserted.");
+      loadDashboard();
+    };
+    reader.readAsArrayBuffer(f);
+  });
+
+  // -------------- Tab switching --------------
+  document.getElementById('trackerTab').addEventListener('click', ()=>{
+    document.getElementById('trackerView').classList.remove('hidden');
+    document.getElementById('directoryView').classList.add('hidden');
+    document.getElementById('trackerTab').classList.add('active');
+    document.getElementById('directoryTab').classList.remove('active');
+  });
+  document.getElementById('directoryTab').addEventListener('click', ()=>{
+    document.getElementById('trackerView').classList.add('hidden');
+    document.getElementById('directoryView').classList.remove('hidden');
+    document.getElementById('directoryTab').classList.add('active');
+    document.getElementById('trackerTab').classList.remove('active');
+  });
+
+  // -------------- Notifications (hybrid) --------------
+  // days: integer days in future to include (e.g., 3)
+  // options: { silent: bool } to suppress in-page success msg when called during load
+  async function sendDueNotifications(days = 3, options = {}) {
+    // First: in-app notification fallback: find records with due_date in next `days`
+    try {
+      const today = new Date();
+      const toDate = new Date(); toDate.setDate(toDate.getDate() + days);
+      const fromStr = today.toISOString().slice(0,10);
+      const toStr = toDate.toISOString().slice(0,10);
+
+      const { data: dues, error } = await supabase.from('payments')
+        .select('*')
+        .not('due_date','is',null)
+        .gte('due_date', fromStr)
+        .lte('due_date', toStr)
+        .order('due_date', {ascending:true});
+
+      if(error) console.warn("sendDueNotifications (in-app) error:", error);
+
+      if(dues && dues.length){
+        // Build in-app message summary
+        const lines = dues.map(d=>{
+          const daysLeft = Math.ceil((new Date(d.due_date) - new Date())/(1000*60*60*24));
+          return `${d.company||d.customer||'No company'} — $${(d.amount||0).toFixed(2)} due ${d.due_date} (${daysLeft} days)`;
+        });
+        // Show in-app alert
+        if(!options.silent) showMessage(`🔔 ${dues.length} upcoming due payment(s). Check dashboard.`, "success");
+        // Also show details inside dashboard upcomingDues (already called by loadDashboard but update here too)
+        upcomingDuesEl.innerHTML = dues.map(d=>{
+          const daysLeft = Math.ceil((new Date(d.due_date) - new Date())/(1000*60*60*24));
+          return `<div style="padding:6px;border-bottom:1px dashed #eee;">
+            <strong>${escapeHtml(d.company||d.customer||'No company')}</strong> — $${(d.amount||0).toFixed(2)}<br/>
+            <span class="small">Due: ${d.due_date} (${daysLeft} days)</span><br/>
+            <span class="small">Recurring: ${d.recurring||'No'}</span>
+          </div>`;
+        }).join('');
+      }
+
+      // Second: try to call the Supabase Edge Function to send actual emails.
+      // If your project has the 'send_due_notifications' function deployed, this will attempt to call it.
+      // It should accept body { days: number, from_email: string } and handle mail sending (server-side).
+      try {
+        const from_email = notifyFromEmailInput.value || "constantlycodingllc@gmail.com";
+        const res = await supabase.functions.invoke('send_due_notifications', { body: { days, from_email } });
+        // A successful invocation may still return a non-200; handle gracefully
+        if(res && res.error) {
+          console.warn("Edge function returned error:", res.error);
+          if(!options.silent) showMessage("⚠️ Edge function returned an error. Check logs.", "error");
+        } else {
+          if(!options.silent) showMessage("✅ Email notifications invoked (edge function).");
+        }
+      } catch(fnErr){
+        console.warn("Edge function invoke failed:", fnErr);
+        if(!options.silent) showMessage("⚠️ Could not invoke email function. Emails will not be sent until function is deployed.", "error");
+      }
+
+      return true;
+    } catch(e){
+      console.error("sendDueNotifications caught:", e);
+      if(!options.silent) showMessage("❌ Notification error: "+(e.message||e), "error");
+      throw e;
+    }
+  }
+
+  // -------------- Utility: escape HTML to avoid injection in innerHTML building --------------
+  function escapeHtml(unsafe) {
+    if(!unsafe && unsafe !== 0) return '';
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // -------------- Helper: initial attempt to restore session if user already logged in --------------
+  (async function tryRestoreSession() {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if(data && data.user){
+        // restore app
+        showApp(data.user);
+      }
+    } catch(e){
+      // ignore
+      console.log("restore session error:", e);
+    }
+  })();
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
