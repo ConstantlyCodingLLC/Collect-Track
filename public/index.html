@@ -25,6 +25,10 @@ th { background: #6a0dad; color: white; }
 .logo { text-align:center; margin-bottom: 20px; }
 .logo h1 { color:#6a0dad; font-size:2em; font-weight:bold; margin:0; }
 .details-section { margin-top: 20px; border-top: 2px solid #ccc; padding-top: 15px; }
+.dashboard { display:flex; gap:12px; margin-bottom:12px; }
+.dash-card { flex:1; padding:12px; border-radius:8px; background:#f9f9fb; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.small { font-size:0.9em; color:#666; }
+.upcoming-list { max-height:160px; overflow:auto; }
 </style>
 </head>
 <body>
@@ -43,6 +47,28 @@ th { background: #6a0dad; color: white; }
 
 <!-- APP -->
 <div class="container hidden" id="app-section">
+<!-- DASHBOARD (TOP) -->
+<div id="dashboardTop" class="dashboard hidden">
+  <div class="dash-card">
+    <h3>Total Amount Paid</h3>
+    <p id="totalPaid" style="font-size:1.5em; font-weight:700;">$0.00</p>
+    <p class="small">Connected to your payments</p>
+  </div>
+  <div class="dash-card">
+    <h3>Upcoming Due Payments (next 30 days)</h3>
+    <div id="upcomingDues" class="upcoming-list small">No upcoming due payments.</div>
+  </div>
+  <div class="dash-card">
+    <h3>Notification Settings</h3>
+    <label class="small">Send reminder email (days before due):</label>
+    <input type="number" id="notifyDaysDefault" value="3" min="0" />
+    <label class="small">Notification from (email):</label>
+    <input type="email" id="notifyFromEmail" value="constantlycodingllc@gmail.com" />
+    <button id="runNotifyBtn" style="margin-top:8px;background-color:#007bff;">Run Notifications Now</button>
+    <p class="small" style="margin-top:8px;">Reminders use your Supabase Edge Function `send_due_notifications` (must exist & be configured).</p>
+  </div>
+</div>
+
 <h2>Financial Tracker</h2>
 <p id="welcome"></p>
 <p id="roleDisplay"></p>
@@ -63,15 +89,18 @@ th { background: #6a0dad; color: white; }
 <!-- PAYMENT TRACKER -->
 <div id="trackerView">
   <label>Invoice / PO Number</label>
-  <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number" />
+  <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number (optional)" />
+
+  <label>Company (required)</label>
+  <input type="text" id="company" placeholder="Enter Company Name" />
 
   <label>Customer Name / Email</label>
   <input type="text" id="customer" placeholder="Enter Customer Name or Email" />
 
-  <label>Amount ($)</label>
-  <input type="number" id="amount" placeholder="Enter Amount" step="0.01" />
+  <label>Amount Paid ($)</label>
+  <input type="number" id="amount" placeholder="Enter Amount Paid" step="0.01" />
 
-  <label>Date Paid</label>
+  <label>Date Paid (transaction date)</label>
   <input type="date" id="date_paid" />
 
   <label>Payment Type</label>
@@ -88,6 +117,23 @@ th { background: #6a0dad; color: white; }
   <label>Deposited Date</label>
   <input type="date" id="deposited_date" />
 
+  <label>Due Date (optional)</label>
+  <input type="date" id="due_date" />
+
+  <label>Recurring</label>
+  <select id="recurring">
+    <option value="">None</option>
+    <option value="monthly">Monthly</option>
+    <option value="bi-weekly">Bi-Weekly</option>
+    <option value="annually">Annually</option>
+  </select>
+
+  <label>Notes (tracking)</label>
+  <input type="text" id="notes" placeholder="Any notes, tracking info, etc." />
+
+  <label>Send reminder (days before due) for this payment (optional)</label>
+  <input type="number" id="notify_days_before" placeholder="e.g., 3" min="0" />
+
   <button id="addPaymentBtn">Add Payment</button>
   <div id="messageBox"></div>
 
@@ -97,7 +143,7 @@ th { background: #6a0dad; color: white; }
   <button id="uploadBtn" style="background-color:#28a745;">Upload File</button>
 
   <label>Search Payments:</label>
-  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, or type..." />
+  <input type="text" id="searchPayments" placeholder="Search by invoice, customer, company, notes, or type..." />
 
   <h3>Budget</h3>
   <p id="budgetDisplay">$0.00</p>
@@ -107,7 +153,7 @@ th { background: #6a0dad; color: white; }
     <h3>My Submission History</h3>
     <table>
       <thead>
-        <tr><th>Invoice</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th></tr>
+        <tr><th>Invoice</th><th>Company</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th><th>Due Date</th><th>Recurring</th><th>Notes</th></tr>
       </thead>
       <tbody id="myHistoryTable"></tbody>
     </table>
@@ -153,6 +199,11 @@ const userDirectoryTable = document.getElementById('userDirectoryTable');
 const welcome = document.getElementById('welcome');
 const roleDisplay = document.getElementById('roleDisplay');
 const messageBox = document.getElementById('messageBox');
+const dashboardTop = document.getElementById('dashboardTop');
+const totalPaidEl = document.getElementById('totalPaid');
+const upcomingDuesEl = document.getElementById('upcomingDues');
+const notifyDaysDefaultInput = document.getElementById('notifyDaysDefault');
+const notifyFromEmailInput = document.getElementById('notifyFromEmail');
 
 function showMessage(msg, type="success") {
   messageBox.textContent = msg;
@@ -181,6 +232,9 @@ async function showApp(user){
   appSection.classList.remove('hidden');
   welcome.textContent=`Welcome, ${user.email}`;
 
+  // show dashboard
+  dashboardTop.classList.remove('hidden');
+
   // -------------------------
   // Ensure the user has a profile
   const { data: existingProfile } = await supabase
@@ -207,9 +261,21 @@ async function showApp(user){
   loadPayments(user.email, role);
   loadMyHistory(user.email);
   loadUserDirectory(role, user.id);
+  loadDashboard();
 
   if(role==='Employee'){ document.getElementById('directoryTab').style.display='none'; }
   if(role==='Employee'){ document.getElementById('assignRoleBtn').style.display='none'; }
+
+  // Run notifications once on load using default days (if desired)
+  // NOTE: This triggers the edge function; make sure send_due_notifications exists.
+  // We call it once here to honor your request for email notifications.
+  try {
+    const days = parseInt(notifyDaysDefaultInput.value) || 0;
+    await sendDueNotifications(days);
+  } catch(e){
+    // silently continue - function may not exist; user will see message if error occurs
+    console.log("sendDueNotifications error on load:", e);
+  }
 }
 
 // -------------------------
@@ -237,25 +303,99 @@ document.getElementById('logoutBtn').addEventListener('click', async()=>{
   authSection.classList.remove('hidden');
 });
 
+// New: run notifications button
+document.getElementById('runNotifyBtn').addEventListener('click', async()=>{
+  const days = parseInt(notifyDaysDefaultInput.value) || 0;
+  try {
+    await sendDueNotifications(days);
+    showMessage("✅ Notification job invoked.");
+  } catch(err){
+    showMessage("❌ Error invoking notifications: "+(err.message||err), "error");
+  }
+});
+
+async function sendDueNotifications(days){
+  // Calls Supabase Edge Function 'send_due_notifications'
+  // body: { days: number, from_email: string }
+  const from_email = notifyFromEmailInput.value || "constantlycodingllc@gmail.com";
+  try {
+    const res = await supabase.functions.invoke('send_due_notifications', {
+      body: { days, from_email }
+    });
+    // supabase functions returns { data, error } sometimes depending on function
+    if(res.error) {
+      console.error("Function error:", res.error);
+      throw res.error;
+    }
+    // optionally show returned data in console
+    console.log("send_due_notifications response:", res);
+    return res;
+  } catch(err){
+    console.error("sendDueNotifications caught:", err);
+    throw err;
+  }
+});
+
 document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
   const { data:{ user } } = await supabase.auth.getUser();
-  const invoice=document.getElementById('invoice').value.trim();
+  const invoice=document.getElementById('invoice').value.trim(); // optional
+  const company=document.getElementById('company').value.trim();
   const customer=document.getElementById('customer').value.trim();
   const amount=parseFloat(document.getElementById('amount').value);
   const date_paid=document.getElementById('date_paid').value;
   const payment_type=document.getElementById('payment_type').value;
   const deposited=document.getElementById('deposited').checked;
   const deposited_date=document.getElementById('deposited_date').value || null;
+  const due_date=document.getElementById('due_date').value || null;
+  const recurring=document.getElementById('recurring').value || null;
+  const notes=document.getElementById('notes').value.trim() || null;
+  const notify_days_before = document.getElementById('notify_days_before').value ? parseInt(document.getElementById('notify_days_before').value) : null;
 
-  if(!invoice||!customer||!amount||!date_paid||!payment_type){
-    return showMessage("All fields except deposited date are required.","error");
+  // Adjusted validation: invoice is optional per your request. company required.
+  if(!company || !customer || !amount || !date_paid || !payment_type){
+    return showMessage("Company, customer, amount paid, date paid and payment type are required.","error");
   }
 
-  const { error } = await supabase.from('payments').insert([{user_email:user.email,created_by:user.id,invoice,customer,amount,date_paid,payment_type,deposited,deposited_date}]);
+  // Prevent duplicate same entry (match invoice+company+amount+date_paid OR company+customer+amount+date_paid)
+  try {
+    let duplicateQuery = supabase.from('payments').select('id');
+    if(invoice){
+      duplicateQuery = duplicateQuery.eq('invoice', invoice).eq('company', company).eq('amount', amount).eq('date_paid', date_paid);
+    } else {
+      duplicateQuery = duplicateQuery.eq('company', company).eq('customer', customer).eq('amount', amount).eq('date_paid', date_paid);
+    }
+    const { data:dupData, error:dupErr } = await duplicateQuery;
+    if(dupErr) console.warn("dup check error:", dupErr);
+    if(dupData && dupData.length){
+      return showMessage("Duplicate payment entry detected. No duplicate allowed.","error");
+    }
+  } catch(e){
+    console.error("Error checking duplicates:", e);
+  }
+
+  const insertObj = {
+    user_email:user.email,
+    created_by:user.id,
+    invoice,
+    company,
+    customer,
+    amount,
+    date_paid,
+    payment_type,
+    deposited,
+    deposited_date,
+    due_date,
+    recurring,
+    notes,
+    notify_days_before
+  };
+
+  const { error } = await supabase.from('payments').insert([insertObj]);
   if(error) showMessage("❌ "+error.message,"error");
   else{
     showMessage("✅ Payment added successfully!");
     loadMyHistory(user.email);
+    loadDashboard();
     document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
   }
 });
@@ -264,18 +404,22 @@ async function loadMyHistory(userEmail){
   const { data, error } = await supabase.from('payments').select('*').eq('user_email',userEmail).order('date_paid',{ascending:false});
   myHistoryTable.innerHTML='';
   if(error || !data.length){
-    myHistoryTable.innerHTML = "<tr><td colspan='6'>No submissions yet.</td></tr>";
+    myHistoryTable.innerHTML = "<tr><td colspan='10'>No submissions yet.</td></tr>";
     return;
   }
   data.forEach(p=>{
     myHistoryTable.innerHTML+=`
       <tr>
-        <td>${p.invoice}</td>
-        <td>${p.customer}</td>
-        <td>$${p.amount.toFixed(2)}</td>
-        <td>${p.date_paid}</td>
-        <td>${p.payment_type}</td>
+        <td>${p.invoice||''}</td>
+        <td>${p.company||''}</td>
+        <td>${p.customer||''}</td>
+        <td>$${(p.amount||0).toFixed(2)}</td>
+        <td>${p.date_paid||''}</td>
+        <td>${p.payment_type||''}</td>
         <td>${p.deposited?'✅':'❌'}</td>
+        <td>${p.due_date||''}</td>
+        <td>${p.recurring||''}</td>
+        <td>${p.notes||''}</td>
       </tr>`;
   });
 }
@@ -298,6 +442,152 @@ async function loadUserDirectory(role, currentUserId){
     userDirectoryTable.innerHTML+=`<tr><td>${u.email}</td><td>${u.role}</td><td>$${total.toFixed(2)}</td></tr>`;
   }
 }
+
+// New: Dashboard loader
+async function loadDashboard(){
+  try {
+    // total paid (all payments)
+    const { data: allPayments } = await supabase.from('payments').select('amount');
+    const total = (allPayments || []).reduce((s,p)=>s + (p.amount || 0), 0);
+    totalPaidEl.textContent = `$${total.toFixed(2)}`;
+
+    // upcoming dues next 30 days
+    const today = new Date().toISOString().slice(0,10);
+    const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+    const in30Str = in30.toISOString().slice(0,10);
+
+    const { data: dues } = await supabase.from('payments')
+      .select('*')
+      .not('due_date','is',null)
+      .gte('due_date', today)
+      .lte('due_date', in30Str)
+      .order('due_date', {ascending:true});
+
+    if(!dues || !dues.length){
+      upcomingDuesEl.innerHTML = '<div>No upcoming due payments.</div>';
+    } else {
+      upcomingDuesEl.innerHTML = dues.map(d=>{
+        const daysLeft = Math.ceil((new Date(d.due_date) - new Date())/(1000*60*60*24));
+        return `<div style="padding:6px;border-bottom:1px dashed #eee;">
+          <strong>${d.company||d.customer||'No company'}</strong> — $${(d.amount||0).toFixed(2)}<br/>
+          <span class="small">Due: ${d.due_date} (${daysLeft} days)</span><br/>
+          <span class="small">Recurring: ${d.recurring||'No'}</span>
+        </div>`;
+      }).join('');
+    }
+  } catch(e){
+    console.error("loadDashboard error:", e);
+  }
+}
+
+// SEARCH: search across many fields (invoice, customer, company, payment_type, notes)
+document.getElementById('searchPayments').addEventListener('input', async(e)=>{
+  const q = e.target.value.trim();
+  if(!q){
+    loadMyHistory((await supabase.auth.getUser()).data.user.email);
+    return;
+  }
+
+  // Build an OR string for supabase
+  const like = `%${q}%`;
+  try {
+    const orQuery = `invoice.ilike.${like},customer.ilike.${like},company.ilike.${like},payment_type.ilike.${like},notes.ilike.${like}`;
+    const { data, error } = await supabase.from('payments').select('*').or(orQuery).order('date_paid',{ascending:false});
+    myHistoryTable.innerHTML = '';
+    if(error || !data.length) {
+      myHistoryTable.innerHTML = "<tr><td colspan='10'>No results found.</td></tr>";
+      return;
+    }
+    data.forEach(p=>{
+      myHistoryTable.innerHTML+=`
+        <tr>
+          <td>${p.invoice||''}</td>
+          <td>${p.company||''}</td>
+          <td>${p.customer||''}</td>
+          <td>$${(p.amount||0).toFixed(2)}</td>
+          <td>${p.date_paid||''}</td>
+          <td>${p.payment_type||''}</td>
+          <td>${p.deposited?'✅':'❌'}</td>
+          <td>${p.due_date||''}</td>
+          <td>${p.recurring||''}</td>
+          <td>${p.notes||''}</td>
+        </tr>`;
+    });
+  } catch(err){
+    console.error("Search error:", err);
+  }
+});
+
+document.getElementById('exportCSVBtn').addEventListener('click', async()=>{
+  // your existing export logic can be plugged here (not changed)
+  const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
+  if(!data || !data.length) return showMessage("No data to export.","error");
+  const csvRows = [];
+  const headers = Object.keys(data[0]);
+  csvRows.push(headers.join(','));
+  data.forEach(row=>{
+    const vals = headers.map(h => `"${(row[h]||'').toString().replace(/"/g,'""')}"`);
+    csvRows.push(vals.join(','));
+  });
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  saveAs(blob, 'payments.csv');
+});
+
+document.getElementById('exportExcelBtn').addEventListener('click', async()=>{
+  const { data } = await supabase.from('payments').select('*').order('date_paid', { ascending: false });
+  if(!data || !data.length) return showMessage("No data to export.","error");
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Payments");
+  const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  saveAs(new Blob([wbout],{type:"application/octet-stream"}), 'payments.xlsx');
+});
+
+document.getElementById('uploadBtn').addEventListener('click', async()=>{
+  const f = document.getElementById('uploadFile').files[0];
+  if(!f) return showMessage("Choose a file first.","error");
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const data = e.target.result;
+    let json;
+    if(f.name.endsWith('.csv')){
+      const text = new TextDecoder().decode(data);
+      const rows = text.split('\n').map(r=>r.split(','));
+      const headers = rows.shift().map(h=>h.replace(/"/g,'').trim());
+      json = rows.map(r=>{
+        const obj = {};
+        headers.forEach((h,i)=> obj[h]=r[i] ? r[i].replace(/"/g,'').trim() : null);
+        return obj;
+      });
+    } else {
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    }
+    // Insert into supabase - you may want to validate columns match your payments table
+    const { error } = await supabase.from('payments').insert(json);
+    if(error) return showMessage("❌ "+error.message,"error");
+    showMessage("✅ File uploaded and records inserted.");
+    loadDashboard();
+  };
+  if(f.name.endsWith('.csv')) reader.readAsArrayBuffer(f);
+  else reader.readAsArrayBuffer(f);
+});
+
+// Keep original directory/tracker tab switching if you had logic (not provided originally).
+// Add simple tab switching:
+document.getElementById('trackerTab').addEventListener('click', ()=>{
+  document.getElementById('trackerView').classList.remove('hidden');
+  document.getElementById('directoryView').classList.add('hidden');
+  document.getElementById('trackerTab').classList.add('active');
+  document.getElementById('directoryTab').classList.remove('active');
+});
+document.getElementById('directoryTab').addEventListener('click', ()=>{
+  document.getElementById('trackerView').classList.add('hidden');
+  document.getElementById('directoryView').classList.remove('hidden');
+  document.getElementById('directoryTab').classList.add('active');
+  document.getElementById('trackerTab').classList.remove('active');
+});
 </script>
 </body>
 </html>
