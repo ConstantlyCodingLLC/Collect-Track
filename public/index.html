@@ -89,8 +89,12 @@
 
   <!-- PAYMENT TRACKER -->
   <div id="trackerView">
-    <label>Invoice / PO Number</label>
+    <label>Purchase Order Number</label>
     <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number (optional)" />
+
+     <label>Invoice </label>
+    <input type="text" id="invoice" placeholder="Enter Invoice # Or PO Number (optional)" />
+
 
     <label>Company (required)</label>
     <input type="text" id="company" placeholder="Enter Company Name" />
@@ -115,7 +119,8 @@
     </select>
 
     <label><input type="checkbox" id="deposited" /> Deposited?</label>
-    <label>Deposited Date</label>
+    <label>Deposited date</label>
+     <label><input type="checkbox" id="deposited" /> Deposited?</label>
     <input type="date" id="deposited_date" />
 
     <label>Due Date (optional)</label>
@@ -146,8 +151,6 @@
     <label>Search Payments:</label>
     <input type="text" id="searchPayments" placeholder="Search by invoice, customer, company, notes, or type..." />
 
-    <h3>Budget</h3>
-    <p id="budgetDisplay">$0.00</p>
 
     <!-- Submission History -->
     <div class="details-section">
