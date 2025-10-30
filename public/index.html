@@ -117,14 +117,15 @@
       <option value="Other">Other</option>
     </select>
 
-    <label>Deposited date</label>
+  
     <label><input type="checkbox" id="deposited" /> Tap box if deposited</label>
+    <label>Deposited date</label>
     <input type="date" id="deposited_date" />
 
-    <label>Due Date (optional)</label>
+    <label>Due Date</label>
     <input type="date" id="due_date" />
 
-    <label>Recurring</label>
+    <label>Payment Reminder</label>
     <select id="recurring">
       <option value="">None</option>
       <option value="monthly">Monthly</option>
@@ -132,7 +133,7 @@
       <option value="annually">Annually</option>
     </select>
 
-    <label>Notes (tracking)</label>
+    <label>Notes </label>
     <input type="text" id="notes" placeholder="Any notes, tracking info, etc." />
 
     <label>Send reminder (days before due) for this payment (optional)</label>
@@ -151,174 +152,157 @@
 
     <!-- Submission History -->
     <div class="details-section">
-      <h3>My Submission History</h3>
-      <table>
+      <h3>Payment History</h3>
+      <table id="paymentsTable">
         <thead>
-          <tr><th>Invoice</th><th>Company</th><th>Customer</th><th>Amount</th><th>Date</th><th>Type</th><th>Deposited</th><th>Due Date</th><th>Recurring</th><th>Notes</th></tr>
+          <tr>
+            <th>Invoice</th><th>Company</th><th>Customer</th><th>Amount</th><th>Date Paid</th>
+            <th>Payment Type</th><th>Deposited</th><th>Deposited Date</th><th>Due Date</th>
+            <th>Recurring</th><th>Notes</th><th>Notify Days Before</th>
+          </tr>
         </thead>
-        <tbody id="myHistoryTable"></tbody>
+        <tbody></tbody>
       </table>
     </div>
-  </div>
-
-  <!-- USER DIRECTORY -->
-  <div id="directoryView" class="hidden">
-    <h3>User Directory</h3>
-    <table>
-      <thead>
-        <tr><th>Email</th><th>Role</th><th>Budget</th></tr>
-      </thead>
-      <tbody id="userDirectory"></tbody>
-    </table>
   </div>
 </div>
 
 <script>
- // --- SUPABASE CONFIG ---
+    // --- SUPABASE CONFIG ---
     const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const authSection = document.getElementById('auth-section');
-  const appSection = document.getElementById('app-section');
+
+  const showMessage = (msg, type="success") => {
+    const box = document.getElementById('messageBox');
+    box.textContent = msg;
+    box.className = type;
+    setTimeout(()=>{ box.textContent=''; box.className=''; }, 5000);
+  };
+
+  // ===== LOGIN / REGISTER =====
   const loginBtn = document.getElementById('loginBtn');
   const registerBtn = document.getElementById('registerBtn');
   const authMessage = document.getElementById('authMessage');
-  const welcome = document.getElementById('welcome');
-  const roleDisplay = document.getElementById('roleDisplay');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
 
-  let currentUser;
+  loginBtn.addEventListener('click', async () => {
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email: emailInput.value,
+      password: passwordInput.value
+    });
+    if(error) authMessage.textContent = error.message;
+    else initApp();
+  });
 
-  async function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return authMessage.innerText = error.message;
-    currentUser = data.user;
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
-    welcome.innerText = `Welcome, ${currentUser.email}`;
-    loadDashboard();
-    loadUserRole();
+  registerBtn.addEventListener('click', async () => {
+    const { error, data } = await supabase.auth.signUp({
+      email: emailInput.value,
+      password: passwordInput.value
+    });
+    if(error) authMessage.textContent = error.message;
+    else authMessage.textContent = "Registration successful! Check email to confirm.";
+  });
+
+  const initApp = async () => {
+    document.getElementById('auth-section').classList.add('hidden');
+    document.getElementById('app-section').classList.remove('hidden');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    document.getElementById('welcome').textContent = `Welcome, ${user.email}`;
+
+    await loadMyHistory(user.email);
+    await loadDashboard();
+  };
+
+  // ===== LOAD PAYMENTS =====
+  async function loadMyHistory(email) {
+    const { data, error } = await supabase.from('payments').select('*').eq('user_email', email).order('created_at',{ascending:false});
+    if(error) return console.error(error);
+    const tbody = document.querySelector('#paymentsTable tbody');
+    tbody.innerHTML = '';
+    data.forEach(p=>{
+      tbody.innerHTML += `<tr>
+        <td>${p.invoice || ''}</td>
+        <td>${p.company}</td>
+        <td>${p.customer}</td>
+        <td>${p.amount}</td>
+        <td>${p.date_paid || ''}</td>
+        <td>${p.payment_type || ''}</td>
+        <td>${p.deposited ? 'Yes':'No'}</td>
+        <td>${p.deposited_date || ''}</td>
+        <td>${p.due_date || ''}</td>
+        <td>${p.recurring || ''}</td>
+        <td>${p.notes || ''}</td>
+        <td>${p.notify_days_before || ''}</td>
+      </tr>`;
+    });
   }
 
-  async function register() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return authMessage.innerText = error.message;
-    authMessage.innerText = "Registration successful. Please log in.";
-  }
+  // ===== ADD PAYMENT =====
+  document.getElementById('addPaymentBtn').addEventListener('click', async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  loginBtn.addEventListener('click', login);
-  registerBtn.addEventListener('click', register);
-
-  // Tabs
-  const trackerTab = document.getElementById('trackerTab');
-  const directoryTab = document.getElementById('directoryTab');
-  const trackerView = document.getElementById('trackerView');
-  const directoryView = document.getElementById('directoryView');
-
-  trackerTab.addEventListener('click', () => { trackerTab.classList.add('active'); directoryTab.classList.remove('active'); trackerView.classList.remove('hidden'); directoryView.classList.add('hidden'); });
-  directoryTab.addEventListener('click', () => { trackerTab.classList.remove('active'); directoryTab.classList.add('active'); trackerView.classList.add('hidden'); directoryView.classList.remove('hidden'); loadDirectory(); });
-
-  // Add Payment
-  const addPaymentBtn = document.getElementById('addPaymentBtn');
-  const messageBox = document.getElementById('messageBox');
-
-  addPaymentBtn.addEventListener('click', async () => {
-    const invoice = document.getElementById('invoice').value;
-    const company = document.getElementById('company').value;
-    const customer = document.getElementById('customer').value;
-    const amount_paid = parseFloat(document.getElementById('amount').value);
-    const date_paid = document.getElementById('date_paid').value;
+    const invoice = document.getElementById('invoice').value.trim() || null;
+    const company = document.getElementById('company').value.trim();
+    const customer = document.getElementById('customer').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
+    const date_paid = document.getElementById('date_paid').value || null;
     const payment_type = document.getElementById('payment_type').value;
     const deposited = document.getElementById('deposited').checked;
-    const deposited_date = document.getElementById('deposited_date').value;
-    const due_date = document.getElementById('due_date').value;
-    const recurring = document.getElementById('recurring').value;
-    const notes = document.getElementById('notes').value;
+    const deposited_date = document.getElementById('deposited_date').value || null;
+    const due_date = document.getElementById('due_date').value || null;
+    const recurring = document.getElementById('recurring').value || null;
+    const notes = document.getElementById('notes').value.trim() || null;
     const notify_days_before = document.getElementById('notify_days_before').value 
       ? parseInt(document.getElementById('notify_days_before').value) 
-      : parseInt(document.getElementById('notifyDaysDefault').value) || 3;
+      : null;
 
-    const insertObj = {
-      user_email: currentUser.email,
-      created_by: currentUser.id,
-      invoice, company, customer, amount: amount_paid,
-      date_paid, payment_type, deposited, deposited_date,
-      due_date, recurring, notes, notify_days_before
-    };
+    if(!company || !customer || !amount || !date_paid || !payment_type) 
+      return showMessage("Company, customer, amount paid, date paid and payment type are required.", "error");
 
-    const { data, error } = await supabase.from('payments').insert([insertObj]);
-    if (error) { messageBox.className = 'error'; messageBox.innerText = error.message; }
-    else { messageBox.className = 'success'; messageBox.innerText = 'Payment added successfully'; loadDashboard(); }
-  });
-
-  const myHistoryTable = document.getElementById('myHistoryTable');
-  const totalPaidEl = document.getElementById('totalPaid');
-  const upcomingDuesEl = document.getElementById('upcomingDues');
-
-  async function loadDashboard() {
-    const { data: payments } = await supabase.from('payments').select('*').eq('user_email', currentUser.email);
-    let total = 0;
-    let dues = [];
-    payments.forEach(p => { total += p.amount || 0; if(p.due_date) dues.push(p); });
-    totalPaidEl.innerText = `$${total.toFixed(2)}`;
-    upcomingDuesEl.innerHTML = dues.length ? dues.map(d => {
-      const daysLeft = Math.ceil((new Date(d.due_date) - new Date()) / (1000*60*60*24));
-      const notifyDays = d.notify_days_before != null ? d.notify_days_before : parseInt(document.getElementById('notifyDaysDefault').value) || 3;
-      const badge = daysLeft <= notifyDays ? `<span class="notify-badge">⚠️ Notify soon</span>` : '';
-      return `<div style="padding:6px;border-bottom:1px dashed #eee;">
-        <strong>${d.company||d.customer||'No company'}</strong> — $${(d.amount||0).toFixed(2)} ${badge}<br/>
-        <span class="small">Due: ${d.due_date} (${daysLeft} days)</span><br/>
-        <span class="small">Recurring: ${d.recurring||'No'}</span>
-      </div>`;
-    }).join('') : 'No upcoming due payments.';
-
-    myHistoryTable.innerHTML = payments.map(p => `<tr>
-      <td>${p.invoice||''}</td>
-      <td>${p.company||''}</td>
-      <td>${p.customer||''}</td>
-      <td>$${(p.amount||0).toFixed(2)}</td>
-      <td>${p.date_paid||''}</td>
-      <td>${p.payment_type||''}</td>
-      <td>${p.deposited? 'Yes' : 'No'}</td>
-      <td>${p.due_date||''}</td>
-      <td>${p.recurring||''}</td>
-      <td>${p.notes||''}</td>
-    </tr>`).join('');
-  }
-
-  async function loadUserRole() {
-    const { data } = await supabase.from('users').select('*').eq('email', currentUser.email);
-    if(data && data.length) { roleDisplay.innerText = `Role: ${data[0].role || 'Employee'}`; }
-  }
-
-  async function loadDirectory() {
-    const { data: users } = await supabase.from('users').select('*');
-    const table = document.getElementById('userDirectory');
-    table.innerHTML = users.map(u => `<tr><td>${u.email}</td><td>${u.role}</td><td>${u.budget||0}</td></tr>`).join('');
-  }
-
-  // Notifications button
-  document.getElementById('runNotifyBtn').addEventListener('click', async () => {
-    messageBox.className = 'success'; messageBox.innerText = 'Running notifications...';
     try {
-      const daysDefault = parseInt(document.getElementById('notifyDaysDefault').value) || 3;
-      const { data } = await supabase.from('payments').select('*');
-      const now = new Date();
-      const notifyPayments = data.filter(p => {
-        if(!p.due_date) return false;
-        const diff = (new Date(p.due_date) - now)/(1000*60*60*24);
-        const notifyDays = p.notify_days_before != null ? p.notify_days_before : daysDefault;
-        return diff <= notifyDays && diff >=0;
-      });
-      if(notifyPayments.length === 0) { messageBox.innerText = 'No notifications to send.'; return; }
-      notifyPayments.forEach(p => console.log('Notify:', p.customer||p.user_email, 'due:', p.due_date));
-      messageBox.innerText = `Notifications processed for ${notifyPayments.length} payments (check console).`;
-    } catch(e) { messageBox.className = 'error'; messageBox.innerText = e.message; }
+      let dupResp;
+      if(invoice) dupResp = await supabase.from('payments').select('id')
+        .eq('invoice', invoice).eq('company', company).eq('amount', amount).eq('date_paid', date_paid);
+      else dupResp = await supabase.from('payments').select('id')
+        .eq('company', company).eq('customer', customer).eq('amount', amount).eq('date_paid', date_paid);
+      if(dupResp.data && dupResp.data.length) return showMessage("Duplicate payment entry detected. No duplicate allowed.", "error");
+    } catch(e){ console.warn("Duplicate check failed:",e); }
+
+    const insertObj = { user_email:currentUser.email, created_by:currentUser.id, invoice, company, customer, amount, date_paid, payment_type, deposited, deposited_date, due_date, recurring, notes, notify_days_before };
+    const { error } = await supabase.from('payments').insert([insertObj]);
+    if(error) showMessage("❌ "+error.message,"error");
+    else {
+      showMessage("✅ Payment added successfully!");
+      await loadMyHistory(currentUser.email);
+      await loadDashboard();
+      document.querySelectorAll('#trackerView input, #trackerView select').forEach(i=>{ if(i.type==='checkbox') i.checked=false; else i.value=''; });
+    }
   });
+
+  // ===== DASHBOARD =====
+  async function loadDashboard() {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: payments } = await supabase.from('payments').select('*').eq('user_email', user.email);
+    let totalPaid = 0;
+    let upcomingHTML = '';
+    const today = new Date();
+    const next30 = new Date(); next30.setDate(today.getDate()+30);
+    payments.forEach(p=>{
+      totalPaid += p.amount || 0;
+      if(p.due_date) {
+        const due = new Date(p.due_date);
+        if(due >= today && due <= next30) upcomingHTML += `<div>${p.invoice||''} - ${p.company} - ${p.amount} due ${p.due_date}</div>`;
+      }
+    });
+    document.getElementById('totalPaid').textContent = `$${totalPaid.toFixed(2)}`;
+    document.getElementById('upcomingDues').innerHTML = upcomingHTML || 'No upcoming due payments.';
+    document.getElementById('dashboardTop').classList.remove('hidden');
+  }
 </script>
+
 </body>
 </html>
