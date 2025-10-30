@@ -214,36 +214,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     appSection.classList.add('hidden');
     currentUser = null;
   });
+// ADD PAYMENT (single entry)
+document.getElementById('addPaymentBtn').addEventListener('click', async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) { showMessage("User not logged in", false); return; }
 
-  // ADD PAYMENT
-  document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
-    if(!currentUser){ showMessage("Not logged in", false); return; }
+    const created_by = user.data.user.id;
+    const user_email = user.data.user.email || '';
 
-    const data = {
-      created_by: currentUser.id,
-      user_email: currentUser.email,
-      po_number: document.getElementById('po_number')?.value || null,
-      invoice: document.getElementById('invoice')?.value || null,
-      company: document.getElementById('company')?.value || null,
-      customer: document.getElementById('customer')?.value || null,
-      amount: parseFloat(document.getElementById('amount')?.value)||0,
-      amount_paid: parseFloat(document.getElementById('amount_paid')?.value)||0,
-      date_paid: document.getElementById('date_paid')?.value || null,
-      payment_type: document.getElementById('payment_type')?.value || null,
-      deposited: document.getElementById('deposited')?.checked || false,
-      deposited_date: document.getElementById('deposited_date')?.value || null,
-      due_date: document.getElementById('due_date')?.value || null,
-      recurring: document.getElementById('recurring')?.value || null,
-      notes: document.getElementById('notes')?.value || null,
-      notify_days_before: parseInt(document.getElementById('notify_days_before')?.value) || null,
-      transaction_date: document.getElementById('transaction_date')?.value || null
+    const paymentData = {
+        created_by,
+        user_email,
+        po_number: document.getElementById('po_number')?.value || '',
+        invoice: document.getElementById('invoice')?.value || '',
+        company: document.getElementById('company')?.value || '',
+        customer: document.getElementById('customer')?.value || '',
+        amount: parseFloat(document.getElementById('amount')?.value) || 0,
+        amount_paid: parseFloat(document.getElementById('amount_paid')?.value) || 0,
+        date_paid: document.getElementById('date_paid')?.value || null,
+        payment_type: document.getElementById('payment_type')?.value || '',
+        deposited: document.getElementById('deposited')?.checked || false,
+        deposited_date: document.getElementById('deposited_date')?.value || null,
+        due_date: document.getElementById('due_date')?.value || null,
+        recurring: document.getElementById('recurring')?.value || null,
+        notes: document.getElementById('notes')?.value || '',
+        notify_days_before: parseInt(document.getElementById('notify_days_before')?.value) || 0,
+        transaction_date: document.getElementById('transaction_date')?.value || null
     };
 
-    const { error } = await supabase.from('payments').insert([data]);
-    if(error){ showMessage(error.message,false); return; }
-    showMessage("Payment added successfully!");
-    loadPayments();
-  });
+    try {
+        const { error } = await supabase.from('payments').insert([paymentData]);
+        if (error) { showMessage(error.message, false); return; }
+        showMessage("Payment added successfully!");
+        loadDashboard();
+    } catch (err) {
+        showMessage(err.message, false);
+    }
+});
+
+// UPLOAD MULTIPLE FILES
+uploadBtn.addEventListener('click', async () => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) { showMessage("User not logged in", false); return; }
+    const created_by = user.data.user.id;
+    const user_email = user.data.user.email || '';
+
+    if (preparedData.length === 0) { showMessage("No data prepared", false); return; }
+
+    try {
+        for (const row of preparedData) {
+            const insertRow = {
+                created_by,
+                user_email,
+                po_number: row.po_number || '',
+                invoice: row.invoice || '',
+                company: row.company || '',
+                customer: row.customer || '',
+                amount: parseFloat(row.amount) || 0,
+                amount_paid: parseFloat(row.amount_paid) || 0,
+                date_paid: row.date_paid || null,
+                payment_type: row.payment_type || '',
+                deposited: row.deposited || false,
+                deposited_date: row.deposited_date || null,
+                due_date: row.due_date || null,
+                recurring: row.recurring || null,
+                notes: row.notes || '',
+                notify_days_before: parseInt(row.notify_days_before) || 0,
+                transaction_date: row.transaction_date || null
+            };
+
+            const { error } = await supabase.from('payments').insert([insertRow]);
+            if (error) showMessage("Error uploading row: " + error.message, false);
+        }
+        showMessage("File data entered successfully!");
+        uploadBtn.disabled = true;
+        preparedData = [];
+    } catch (err) {
+        showMessage(err.message, false);
+    }
+});
+
 
   // LOAD PAYMENTS
   async function loadPayments(search="") {
