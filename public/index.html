@@ -90,13 +90,12 @@
   <!-- PAYMENT TRACKER -->
   <div id="trackerView">
     <label>Purchase Order Number</label>
-    <input type="text" id="invoice" placeholder="PO Number " />
+    <input type="text" id="po_number" placeholder="PO Number " />
 
-     <label>Invoice </label>
+    <label>Invoice</label>
     <input type="text" id="invoice" placeholder="Enter Invoice # " />
 
-
-    <label>Bill Type</label>
+    <label>Bill Type / Company</label>
     <input type="text" id="company" placeholder="Enter Company Name" />
 
     <label>Payer Name / Email</label>
@@ -118,9 +117,8 @@
       <option value="Other">Other</option>
     </select>
 
-
     <label>Deposited date</label>
-     <label><input type="checkbox" id="deposited" /> Tap box if deposited</label>
+    <label><input type="checkbox" id="deposited" /> Tap box if deposited</label>
     <input type="date" id="deposited_date" />
 
     <label>Due Date (optional)</label>
@@ -151,7 +149,6 @@
 
     <label>Search Payments:</label>
     <input type="text" id="searchPayments" placeholder="Search by invoice, customer, company, notes, or type..." />
-
 
     <!-- Submission History -->
     <div class="details-section">
@@ -193,12 +190,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-  <script>
-document.addEventListener('DOMContentLoaded', async () => {
-    // --- SUPABASE CONFIG ---
-    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+  const SUPABASE_KEY = "YOUR_SUPABASE_KEY_HERE";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const authSection = document.getElementById('auth-section');
   const appSection = document.getElementById('app-section');
@@ -206,40 +200,68 @@ document.addEventListener('DOMContentLoaded', async () => {
   const registerBtn = document.getElementById('registerBtn');
   const authMessage = document.getElementById('authMessage');
   const logoutBtn = document.getElementById('logoutBtn');
+  const messageBox = document.getElementById('messageBox');
 
-  async function showMessage(msg, success=true) {
-    const box = document.getElementById('messageBox');
-    box.textContent = msg;
-    box.className = success ? 'success' : 'error';
-    setTimeout(()=>box.textContent='', 4000);
+  let currentUserEmail = null;
+
+  async function showMessage(msg, success=true){
+    messageBox.textContent = msg;
+    messageBox.className = success ? 'success' : 'error';
+    setTimeout(()=>messageBox.textContent='', 4000);
   }
 
-  let currentUser = null;
+  async function loadPayments(search=""){
+    const { data, error } = await supabase.from('payments')
+      .select('*')
+      .eq('user_email', currentUserEmail)
+      .ilike('invoice', `%${search}%`)
+      .order('date_paid',{ascending:false});
+    const table = document.getElementById('myHistoryTable');
+    table.innerHTML = '';
+    if(!error && data){
+      data.forEach(p=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.invoice || ''}</td>
+          <td>${p.company || ''}</td>
+          <td>${p.customer || ''}</td>
+          <td>${p.amount || 0}</td>
+          <td>${p.date_paid||''}</td>
+          <td>${p.payment_type||''}</td>
+          <td>${p.deposited? 'Yes':'No'}</td>
+          <td>${p.due_date||''}</td>
+          <td>${p.recurring||''}</td>
+          <td>${p.notes||''}</td>
+        `;
+        table.appendChild(tr);
+      });
+    }
+  }
 
   loginBtn.addEventListener('click', async()=>{
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await supabase.auth.signInWithPassword({email,password});
-    if (error) { authMessage.textContent=error.message; authMessage.style.color='red'; return; }
-    currentUser = data.user;
+    if(error){ authMessage.textContent = error.message; authMessage.style.color='red'; return; }
+    currentUserEmail = email;
     authSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-    loadUserPayments();
+    loadPayments();
   });
 
   registerBtn.addEventListener('click', async()=>{
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await supabase.auth.signUp({email,password});
-    if (error) { authMessage.textContent=error.message; authMessage.style.color='red'; return; }
+    if(error){ authMessage.textContent = error.message; authMessage.style.color='red'; return; }
     authMessage.textContent="Registration success! You can login now."; authMessage.style.color='green';
   });
 
   logoutBtn.addEventListener('click', async()=>{
     await supabase.auth.signOut();
-    currentUser = null;
     authSection.classList.remove('hidden');
     appSection.classList.add('hidden');
+    currentUserEmail = null;
   });
 
   // TABS
@@ -259,68 +281,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ADD PAYMENT
   document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
-    if(!currentUser) return showMessage("Not logged in", false);
-    const invoice = document.getElementById('invoice').value;
-    const company = document.getElementById('company').value;
-    const customer = document.getElementById('customer').value;
-    const amount = parseFloat(document.getElementById('amount').value) || 0;
-    const date_paid = document.getElementById('date_paid').value || null;
-    const payment_type = document.getElementById('payment_type').value;
-    const deposited = document.getElementById('deposited').checked;
-    const deposited_date = document.getElementById('deposited_date').value || null;
-    const due_date = document.getElementById('due_date').value || null;
-    const recurring = document.getElementById('recurring').value || null;
-    const notes = document.getElementById('notes').value;
-    const notify_days_before = parseInt(document.getElementById('notify_days_before').value) || null;
-
-    const { error } = await supabase.from('payments').insert([{
-      user_email: currentUser.email,
-      invoice, company, customer, amount, date_paid, payment_type, deposited,
-      deposited_date, due_date, recurring, notes, notify_days_before
-    }]);
-
-    if(error) return showMessage(error.message,false);
+    if(!currentUserEmail){ showMessage("User not logged in", false); return; }
+    const row = {
+      user_email: currentUserEmail,
+      po_number: document.getElementById('po_number').value || null,
+      invoice: document.getElementById('invoice').value || null,
+      company: document.getElementById('company').value || null,
+      customer: document.getElementById('customer').value || null,
+      amount: parseFloat(document.getElementById('amount').value) || 0,
+      date_paid: document.getElementById('date_paid').value || null,
+      payment_type: document.getElementById('payment_type').value || null,
+      deposited: document.getElementById('deposited').checked,
+      deposited_date: document.getElementById('deposited_date').value || null,
+      due_date: document.getElementById('due_date').value || null,
+      recurring: document.getElementById('recurring').value || null,
+      notes: document.getElementById('notes').value || null,
+      notify_days_before: parseInt(document.getElementById('notify_days_before').value) || null
+    };
+    const { error } = await supabase.from('payments').insert([row]);
+    if(error){ showMessage(error.message,false); return; }
     showMessage("Payment added successfully!");
-    loadUserPayments();
+    loadPayments();
   });
 
-  // LOAD PAYMENTS FOR CURRENT USER
-  async function loadUserPayments() {
-    if(!currentUser) return;
-    const { data, error } = await supabase.from('payments')
-      .select('*')
-      .eq('user_email', currentUser.email)
-      .order('date_paid', { ascending: false });
-
-    if(error) return showMessage(error.message,false);
-
-    const tbody = document.getElementById('myHistoryTable');
-    tbody.innerHTML="";
-    data.forEach(row=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row.invoice||''}</td>
-        <td>${row.company||''}</td>
-        <td>${row.customer||''}</td>
-        <td>${row.amount||0}</td>
-        <td>${row.date_paid||''}</td>
-        <td>${row.payment_type||''}</td>
-        <td>${row.deposited?'Yes':'No'}</td>
-        <td>${row.due_date||''}</td>
-        <td>${row.recurring||''}</td>
-        <td>${row.notes||''}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  // SEARCH PAYMENTS (filter table by logged-in user)
-  document.getElementById('searchPayments').addEventListener('input', ()=>{
-    const filter = document.getElementById('searchPayments').value.toLowerCase();
-    const rows = document.getElementById('myHistoryTable').getElementsByTagName('tr');
-    for(const r of rows){
-      r.style.display = Array.from(r.cells).some(c => c.textContent.toLowerCase().includes(filter)) ? '' : 'none';
-    }
+  // SEARCH PAYMENTS
+  document.getElementById('searchPayments').addEventListener('input', (e)=>{
+    loadPayments(e.target.value);
   });
 
   // FILE UPLOAD
@@ -345,26 +331,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   uploadBtn.addEventListener('click', async()=>{
+    if(!currentUserEmail){ showMessage("User not logged in", false); return; }
     if(preparedData.length===0){ showMessage("No data prepared", false); return; }
-    if(!currentUser) return showMessage("Not logged in", false);
-    try {
+    try{
       for(const row of preparedData){
-        row.user_email = currentUser.email;
+        row.user_email = currentUserEmail;
+        row.po_number = row.po_number || null;
+        row.invoice = row.invoice || null;
+        row.company = row.company || null;
+        row.customer = row.customer || null;
+        row.amount = parseFloat(row.amount)||0;
         row.date_paid = row.date_paid || null;
+        row.payment_type = row.payment_type || null;
+        row.deposited = row.deposited || false;
         row.deposited_date = row.deposited_date || null;
         row.due_date = row.due_date || null;
-        row.amount = parseFloat(row.amount)||0;
-        row.recurring = row.recurring||null;
+        row.recurring = row.recurring || null;
+        row.notes = row.notes || null;
         row.notify_days_before = parseInt(row.notify_days_before)||null;
+
         const { error } = await supabase.from('payments').insert([row]);
         if(error) showMessage("Error uploading: "+error.message,false);
       }
       showMessage("File data entered successfully!");
-      uploadBtn.disabled=true;
-      preparedData=[];
-      loadUserPayments();
+      preparedData = [];
+      uploadBtn.disabled = true;
+      loadPayments();
     } catch(err){ showMessage(err.message,false); }
   });
+
 });
 </script>
 
