@@ -193,9 +193,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // --- SUPABASE CONFIG ---
+    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const authSection = document.getElementById('auth-section');
   const appSection = document.getElementById('app-section');
@@ -211,21 +214,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(()=>box.textContent='', 4000);
   }
 
-  async function fetchUserRole() {
-    const user = supabase.auth.getUser();
-    if (!user) return null;
-    const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    return data?.role || null;
-  }
+  let currentUser = null;
 
   loginBtn.addEventListener('click', async()=>{
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await supabase.auth.signInWithPassword({email,password});
     if (error) { authMessage.textContent=error.message; authMessage.style.color='red'; return; }
+    currentUser = data.user;
     authSection.classList.add('hidden');
     appSection.classList.remove('hidden');
-    loadDashboard();
+    loadUserPayments();
   });
 
   registerBtn.addEventListener('click', async()=>{
@@ -238,6 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   logoutBtn.addEventListener('click', async()=>{
     await supabase.auth.signOut();
+    currentUser = null;
     authSection.classList.remove('hidden');
     appSection.classList.add('hidden');
   });
@@ -259,40 +259,76 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ADD PAYMENT
   document.getElementById('addPaymentBtn').addEventListener('click', async()=>{
-    let invoice = document.getElementById('invoice').value;
-    let company = document.getElementById('company').value;
-    let customer = document.getElementById('customer').value;
-    let amount = parseFloat(document.getElementById('amount').value) || 0;
-    let date_paid = document.getElementById('date_paid').value || null;
-    let payment_type = document.getElementById('payment_type').value;
-    let deposited = document.getElementById('deposited').checked;
-    let deposited_date = document.getElementById('deposited_date').value || null;
-    let due_date = document.getElementById('due_date').value || null;
-    let recurring = document.getElementById('recurring').value || null;
-    let notes = document.getElementById('notes').value;
-    let notify_days_before = parseInt(document.getElementById('notify_days_before').value) || null;
+    if(!currentUser) return showMessage("Not logged in", false);
+    const invoice = document.getElementById('invoice').value;
+    const company = document.getElementById('company').value;
+    const customer = document.getElementById('customer').value;
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const date_paid = document.getElementById('date_paid').value || null;
+    const payment_type = document.getElementById('payment_type').value;
+    const deposited = document.getElementById('deposited').checked;
+    const deposited_date = document.getElementById('deposited_date').value || null;
+    const due_date = document.getElementById('due_date').value || null;
+    const recurring = document.getElementById('recurring').value || null;
+    const notes = document.getElementById('notes').value;
+    const notify_days_before = parseInt(document.getElementById('notify_days_before').value) || null;
 
-    try {
-      const { error } = await supabase.from('payments').insert([{
-        invoice, company, customer, amount, date_paid, payment_type, deposited, deposited_date, due_date, recurring, notes, notify_days_before
-      }]);
-      if (error) { showMessage(error.message,false); return; }
-      showMessage("Payment added successfully!");
-      loadDashboard();
-    } catch(err){ showMessage(err.message,false); }
+    const { error } = await supabase.from('payments').insert([{
+      user_email: currentUser.email,
+      invoice, company, customer, amount, date_paid, payment_type, deposited,
+      deposited_date, due_date, recurring, notes, notify_days_before
+    }]);
+
+    if(error) return showMessage(error.message,false);
+    showMessage("Payment added successfully!");
+    loadUserPayments();
   });
 
-  // LOAD DASHBOARD DATA
-  async function loadDashboard() {
-    // just a placeholder, fetch payments etc if needed
+  // LOAD PAYMENTS FOR CURRENT USER
+  async function loadUserPayments() {
+    if(!currentUser) return;
+    const { data, error } = await supabase.from('payments')
+      .select('*')
+      .eq('user_email', currentUser.email)
+      .order('date_paid', { ascending: false });
+
+    if(error) return showMessage(error.message,false);
+
+    const tbody = document.getElementById('myHistoryTable');
+    tbody.innerHTML="";
+    data.forEach(row=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.invoice||''}</td>
+        <td>${row.company||''}</td>
+        <td>${row.customer||''}</td>
+        <td>${row.amount||0}</td>
+        <td>${row.date_paid||''}</td>
+        <td>${row.payment_type||''}</td>
+        <td>${row.deposited?'Yes':'No'}</td>
+        <td>${row.due_date||''}</td>
+        <td>${row.recurring||''}</td>
+        <td>${row.notes||''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
+
+  // SEARCH PAYMENTS (filter table by logged-in user)
+  document.getElementById('searchPayments').addEventListener('input', ()=>{
+    const filter = document.getElementById('searchPayments').value.toLowerCase();
+    const rows = document.getElementById('myHistoryTable').getElementsByTagName('tr');
+    for(const r of rows){
+      r.style.display = Array.from(r.cells).some(c => c.textContent.toLowerCase().includes(filter)) ? '' : 'none';
+    }
+  });
 
   // FILE UPLOAD
   const uploadFile = document.getElementById('uploadFile');
   const prepareUploadBtn = document.getElementById('prepareUploadBtn');
   const uploadBtn = document.getElementById('uploadBtn');
-
   let preparedData = [];
+
   prepareUploadBtn.addEventListener('click',()=>{
     const file = uploadFile.files[0];
     if(!file){ showMessage("Select a file first", false); return; }
@@ -310,22 +346,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   uploadBtn.addEventListener('click', async()=>{
     if(preparedData.length===0){ showMessage("No data prepared", false); return; }
+    if(!currentUser) return showMessage("Not logged in", false);
     try {
       for(const row of preparedData){
-        // ensure correct types & defaults
+        row.user_email = currentUser.email;
         row.date_paid = row.date_paid || null;
         row.deposited_date = row.deposited_date || null;
         row.due_date = row.due_date || null;
         row.amount = parseFloat(row.amount)||0;
         row.recurring = row.recurring||null;
         row.notify_days_before = parseInt(row.notify_days_before)||null;
-
         const { error } = await supabase.from('payments').insert([row]);
         if(error) showMessage("Error uploading: "+error.message,false);
       }
       showMessage("File data entered successfully!");
       uploadBtn.disabled=true;
       preparedData=[];
+      loadUserPayments();
     } catch(err){ showMessage(err.message,false); }
   });
 });
