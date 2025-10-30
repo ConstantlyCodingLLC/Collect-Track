@@ -190,9 +190,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
-  const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
-  const SUPABASE_KEY = "YOUR_SUPABASE_KEY_HERE";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+     // --- SUPABASE CONFIG ---
+    const SUPABASE_URL = "https://mqzawrkklhxspurkddhy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xemF3cmtrbGh4c3B1cmtkZGh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDczNDMsImV4cCI6MjA3NjIyMzM0M30.2GGjMG2jM1o89wb__u_D6-xHwjVG57VDSYf8rzQcGss";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 
   const authSection = document.getElementById('auth-section');
   const appSection = document.getElementById('app-section');
