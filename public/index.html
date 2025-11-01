@@ -129,6 +129,51 @@
   <h2>Financial Tracker</h2>
   <p id="welcome"></p>
 
+  <!-- Install App Button -->
+<button id="installAppBtn" style="
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #6a0dad;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  display: none;
+  z-index: 9999;
+">
+  📲 Install FiloFax App
+</button>
+
+    <!-- Install App Button Script -->
+  <script>
+  let deferredPrompt;
+  const installBtn = document.getElementById('installAppBtn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'block'; // show button
+  });
+
+  installBtn.addEventListener('click', async () => {
+    installBtn.style.display = 'none';
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User ${outcome === 'accepted' ? 'accepted' : 'dismissed'} the install prompt`);
+    deferredPrompt = null;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    console.log("✅ FiloFax installed!");
+    installBtn.style.display = 'none';
+  });
+</script>
+
+
   <div style="display:flex; justify-content:space-between;">
     <button id="trackerTab" class="tab-btn active">My Payments</button>
     <button id="directoryTab" class="tab-btn">User Directory</button>
