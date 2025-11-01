@@ -129,7 +129,7 @@
   <h2>Financial Tracker</h2>
   <p id="welcome"></p>
 
-  <!-- Install App Button -->
+<!-- ✅ Install App Button -->
 <button id="installAppBtn" style="
   position: fixed;
   bottom: 20px;
@@ -148,30 +148,37 @@
   📲 Install FiloFax App
 </button>
 
-    <!-- Install App Button Script -->
-  <script>
+<!-- ✅ Install App Script -->
+<script>
   let deferredPrompt;
   const installBtn = document.getElementById('installAppBtn');
 
+  // Wait for the install prompt event
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    installBtn.style.display = 'block'; // show button
+    installBtn.style.display = 'block'; // Show install button
+    console.log('📦 FiloFax install prompt ready');
   });
 
+  // Handle the install button click
   installBtn.addEventListener('click', async () => {
-    installBtn.style.display = 'none';
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User ${outcome === 'accepted' ? 'accepted' : 'dismissed'} the install prompt`);
-    deferredPrompt = null;
+    if (deferredPrompt) {
+      deferredPrompt.prompt(); // Show the native prompt
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to install prompt: ${outcome}`);
+      deferredPrompt = null;
+      installBtn.style.display = 'none'; // Hide after use
+    }
   });
 
+  // When app is successfully installed
   window.addEventListener('appinstalled', () => {
-    console.log("✅ FiloFax installed!");
+    console.log('✅ FiloFax app installed successfully');
     installBtn.style.display = 'none';
   });
 </script>
+
 
 
   <div style="display:flex; justify-content:space-between;">
