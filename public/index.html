@@ -4,18 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FiloFax - Corporate Tracker</title>
-  <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#6a0dad" />
 
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js")
-        .then(() => console.log("✅ Service Worker registered for FiloFax"))
-        .catch(err => console.error("Service Worker registration failed:", err));
-    });
-  }
-</script>
+<!-- === PWA / Install (ADDED) === -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#6a0dad" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<!-- === END PWA / Install === -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -96,11 +92,30 @@
     input, select { padding: 8px; font-size: 0.9em; }
     th, td { padding: 6px; font-size: 0.8em; }
   }
+
+  /* === Install banner small styling (ADDED) === */
+  #installBanner { max-width:900px;margin:12px auto;padding:10px;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:none;align-items:center;gap:12px;font-family:Arial; }
+  #installBanner button{ background:#6a0dad;color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:bold;}
+  #installBanner .secondary{ background:#f4f4f4;color:#333; }
+  /* === end install banner === */
 </style>
 </head>
 <body>
 
 <div class="logo"><h1>💰FiloFax</h1></div>
+
+<!-- === Install banner (ADDED) - will show on supported devices without changing layout === -->
+<div id="installBanner" role="region" aria-label="Install Filofax">
+  <div style="flex:1;">
+    <strong>Install Filofax</strong>
+    <div style="font-size:0.9em;color:#666">Install this app to your device for fast access and offline use.</div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button id="installBtn">Install</button>
+    <button id="installDismiss" class="secondary">Dismiss</button>
+  </div>
+</div>
+<!-- === end install banner === -->
 
 <!-- AUTH -->
 <div class="container" id="auth-section">
@@ -128,58 +143,6 @@
 
   <h2>Financial Tracker</h2>
   <p id="welcome"></p>
-
-<!-- ✅ Install App Button -->
-<button id="installAppBtn" style="
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background-color: #6a0dad;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 15px;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-  display: none;
-  z-index: 9999;
-">
-  📲 Install FiloFax App
-</button>
-
-<!-- ✅ Install App Script -->
-<script>
-  let deferredPrompt;
-  const installBtn = document.getElementById('installAppBtn');
-
-  // Wait for the install prompt event
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'block'; // Show install button
-    console.log('📦 FiloFax install prompt ready');
-  });
-
-  // Handle the install button click
-  installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt(); // Show the native prompt
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to install prompt: ${outcome}`);
-      deferredPrompt = null;
-      installBtn.style.display = 'none'; // Hide after use
-    }
-  });
-
-  // When app is successfully installed
-  window.addEventListener('appinstalled', () => {
-    console.log('✅ FiloFax app installed successfully');
-    installBtn.style.display = 'none';
-  });
-</script>
-
-
 
   <div style="display:flex; justify-content:space-between;">
     <button id="trackerTab" class="tab-btn active">My Payments</button>
@@ -279,6 +242,7 @@
 </div>
 
 <script>
+/* === YOUR ORIGINAL APP SCRIPT STARTS HERE (UNCHANGED) === */
 document.addEventListener('DOMContentLoaded', async () => {
     // --- SUPABASE CONFIG ---
     // --- SUPABASE CONFIG ---
@@ -538,6 +502,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 });
+/* === YOUR ORIGINAL APP SCRIPT ENDS HERE (UNCHANGED) === */
 </script>
+
+<!-- === Service worker registration & PWA install handling (ADDED) === -->
+<script>
+  // Service worker registration
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.warn('Service Worker registration failed:', err));
+    });
+  }
+
+  // Install prompt handling
+  (function(){
+    let deferredPrompt = null;
+    const installBanner = document.getElementById('installBanner');
+    const installBtn = document.getElementById('installBtn');
+    const dismissBtn = document.getElementById('installDismiss');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // show the small banner
+      installBanner.style.display = 'flex';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) {
+        // fallback: open browser install instructions for iOS
+        alert('If your browser supports installation, use the browser menu to install this app.');
+        return;
+      }
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installBanner.style.display = 'none';
+    });
+
+    dismissBtn.addEventListener('click', () => {
+      installBanner.style.display = 'none';
+    });
+
+    // For iOS: show banner optionally if stand-alone not detected and on iOS
+    const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isInStandalone = ('standalone' in window.navigator) && window.navigator.standalone;
+    if (isIos && !isInStandalone) {
+      // small hint only if not already installed
+      const maybeShow = installBanner;
+      maybeShow.style.display = 'flex';
+      installBtn.textContent = 'Add to Home Screen';
+      installBtn.onclick = () => { alert('Open Safari → Share → Add to Home Screen to install Filofax.'); };
+    }
+  })();
+</script>
+<!-- === end PWA code additions === -->
+
 </body>
 </html>
