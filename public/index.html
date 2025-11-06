@@ -149,6 +149,24 @@
     <button id="directoryTab" class="tab-btn">User Directory</button>
   </div>
 
+  <!-- Add this to your dashboard HTML page -->
+<div id="money-saved-dashboard" style="
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.1);
+  padding:20px;
+  max-width:400px;
+  margin:auto;
+  text-align:center;
+  font-family:Arial,sans-serif;
+">
+  <h2 style="color:#6a0dad;">Money Saved Dashboard</h2>
+  <p><strong>Total Received:</strong> $<span id="totalReceived">0.00</span></p>
+  <p><strong>Total Outstanding:</strong> $<span id="totalOutstanding">0.00</span></p>
+  <p><strong>Money Saved (10%):</strong> $<span id="moneySaved">0.00</span></p>
+  <small style="color:#777;">Auto-calculated from payment records</small>
+</div>
+
   <!-- PAYMENT TRACKER -->
   <div id="trackerView">
     <label>Purchase Order Number</label>
@@ -330,6 +348,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPayments();
     });
 
+   // Initialize Supabase
+  const supabase = window.supabase.createClient(
+    'https://YOUR_PROJECT_URL.supabase.co',
+    'YOUR_PUBLIC_ANON_KEY'
+  );
+
+  async function loadMoneySaved() {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return console.log("Not logged in");
+
+    // Fetch from the money_saved_dashboard view
+    const { data, error } = await supabase
+      .from('money_saved_dashboard')
+      .select('*')
+      .eq('created_by', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error loading dashboard:", error);
+      return;
+    }
+
+    const totalReceived = data?.total_received || 0;
+    const totalOutstanding = data?.total_outstanding || 0;
+    const moneySaved = data?.money_saved_estimate || 0;
+
+    document.getElementById("totalReceived").textContent = totalReceived.toFixed(2);
+    document.getElementById("totalOutstanding").textContent = totalOutstanding.toFixed(2);
+    document.getElementById("moneySaved").textContent = moneySaved.toFixed(2);
+  }
+
+  // Initial load
+  loadMoneySaved();
+
+  // Subscribe for real-time updates when payments change
+  supabase
+    .channel('realtime:payments')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'payments' },
+      payload => {
+        console.log("Payment change detected:", payload);
+        loadMoneySaved();
+      }
+    )
+    .subscribe();
+  
     // --- LOAD PAYMENTS ---
     async function loadPayments(search=""){
         if(!currentUser) return;
