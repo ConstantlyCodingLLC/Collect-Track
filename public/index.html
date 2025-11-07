@@ -699,6 +699,59 @@ document.addEventListener('DOMContentLoaded', async () => {
       installBtn.onclick = () => { alert('Open Safari → Share → Add to Home Screen to install Filofax.'); };
     }
   })();
+
+   // Add payment and send to Supabase
+  addPaymentBtn.addEventListener('click', async () => {
+    const name = document.getElementById('paymentFrom').value.trim();
+    const amount = document.getElementById('paymentAmount').value.trim();
+    const user = (await supabase.auth.getUser()).data.user;
+
+    if (!user) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    if (!name || !amount) {
+      alert('Please enter both name and amount');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('payments')
+      .insert([{
+        created_by: user.id,
+        user_email: user.email,
+        customer: name,
+        amount: parseFloat(amount),
+        payment_type: 'Received',
+        transaction_date: new Date().toISOString().split('T')[0]
+      }]);
+
+    if (error) {
+      console.error('Error inserting payment:', error);
+      alert('Error saving payment');
+      return;
+    }
+
+    // Show it on screen
+    const paymentDiv = document.createElement('div');
+    paymentDiv.style = `
+      background-color: rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    `;
+    paymentDiv.innerHTML = `
+      <span><strong>${name}</strong></span>
+      <span>$${parseFloat(amount).toFixed(2)}</span>
+    `;
+    paymentsList.appendChild(paymentDiv);
+
+    document.getElementById('paymentFrom').value = '';
+    document.getElementById('paymentAmount').value = '';
+  });
 </script>
 <!-- === end PWA code additions === -->
 
