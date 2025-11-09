@@ -370,19 +370,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     
-    const { data, error } = await supabase
-  .from('invoices')
-  .select('*')
-  .or(`
-    po_number.ilike.%${searchTerm}%,
-    invoice.ilike.%${searchTerm}%,
-    company.ilike.%${searchTerm}%,
-    customer.ilike.%${searchTerm}%,
-    notes.ilike.%${searchTerm}%,
-    payment_type.ilike.%${searchTerm}%
-  `);
-
-
     // Fetch from the money_saved_dashboard view
     const { data, error } = await supabase
       .from('money_saved_dashboard')
